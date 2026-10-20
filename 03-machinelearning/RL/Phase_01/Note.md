@@ -243,7 +243,7 @@ $$
 在实际强化学习中，其值可以变化
 
 接下来将编写第一个强化学习程序，见
-[老虎机](experiment/slot_machine.ipynb)
+[老虎机](experiments/slot_machine.ipynb)
 
 
 
