@@ -294,14 +294,14 @@ $$
 $$
 目标值=r+\gamma \max_{a'}Q(s',a')
 $$
-然后让当前Q值目标值移动一点：
+然后让当前Q值超目标值移动一点：
 $$
-Q_new=Q_{old}+\alpha(目标值-Q_{old})
+Q_{new}=Q_{old}+\alpha(目标值-Q_{old})
 $$
 代入后得到：
 $$
  \boxed{ Q(s,a)\leftarrow Q(s,a)+ \alpha\left[ r+\gamma\max_{a'}Q(s',a')-Q(s,a) \right] }
-$$
+$$ 
 即**Q-learning**更新公式。
 
 其中：
