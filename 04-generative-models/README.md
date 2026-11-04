@@ -2,15 +2,22 @@
 
 从第一性原理建立生成模型所需的数学知识链。目标不是记忆公式，而是理解每一个公式从哪里来、为什么成立，以及它在模型中解决什么问题。
 
-## 路线
+## 路线与进度
 
-1. Part I 数学语言：函数、概率、条件概率、随机变量、概率密度、期望与方差
-2. Part II 概率模型：高斯分布、多维高斯、log、似然、最大似然
-3. Part III 信息与推断：信息量、熵、交叉熵、KL、贝叶斯、潜变量模型
-4. Part IV 变分推断：难解后验、近似后验、Jensen、ELBO
-5. Part V VAE：从 AE 到 VAE、重参数化、KL 与重建项
-6. Part VI Diffusion：前向扩散、反向过程、DDPM、Score
-7. Part VII Flow Matching：ODE、向量场、概率路径、连续性方程、CFM
-8. Part VIII 统一视角：VAE / Diffusion / Score / Flow Matching
+- ✅ Part I 数学语言：函数、概率、条件概率、随机变量、概率密度、期望与方差
+- ✅ Part II 概率模型：高斯分布、多维高斯、log、似然、最大似然估计
+- ⏳ Part III 信息与推断：信息量、熵、交叉熵、KL、贝叶斯、潜变量模型
+- ⏳ Part IV 变分推断：难解后验、近似后验、Jensen、ELBO
+- ⏳ Part V VAE：从 AE 到 VAE、重参数化、KL 与重建项
+- ⏳ Part VI Diffusion：前向扩散、反向过程、DDPM、Score
+- ⏳ Part VII Flow Matching：ODE、向量场、概率路径、连续性方程、CFM
+- ⏳ Part VIII 统一视角：VAE / Diffusion / Score / Flow Matching
 
-网页版本位于仓库的 `docs/` 目录。当前已完成 Part I。
+网页版本位于仓库的 `docs/` 目录，由 GitHub Pages 托管。
+
+## 内容原则
+
+1. 新概念必须能追溯到已介绍的概念。
+2. 关键公式不跳步；每个重要等号或不等号说明依据。
+3. 同时给出直觉解释、数学定义、生成模型中的作用。
+4. 若某个数学工具暂不展开证明，会明确标记为可选深入或后续章节内容。
