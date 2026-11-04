@@ -1,0 +1,868 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Part VII Flow Matching · FishTank</title><link rel="stylesheet" href="assets/style.css"><script>window.MathJax={tex:{inlineMath:[['\\(','\\)']],displayMath:[['\\[','\\]']]}};</script><script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head><body>
+<aside><div class="brand">🐟 FishTank</div><div class="course">Part VII · Flow Matching</div><nav>
+<a href="index.html">← 课程首页</a><a href="part5.html">Part V VAE</a><a href="part6.html">Part VI Diffusion</a><hr>
+<a class="active" href="#intro">Part VII 导读</a><a href="#43">43 从离散步骤到连续时间</a><a href="#44">44 ODE 是什么</a><a href="#45">45 向量场与流</a><a href="#46">46 概率分布也会流动</a><a href="#47">47 连续性方程</a><a href="#48">48 Continuous Normalizing Flow</a><a href="#49">49 Flow Matching</a><a href="#50">50 为什么直接 FM 难训练</a><a href="#51">51 Conditional Flow Matching</a><a href="#52">52 线性概率路径</a><a href="#53">53 OT 与更直的路径</a><a href="#54">54 与 Diffusion / Score 的关系</a><a href="#55">55 训练与采样</a><a href="#summary">知识闭环</a>
+<hr><span>Part VIII 统一视角 · 待更新</span></nav></aside>
+<main><article>
+
+<section id="intro"><p class="eyebrow">PART VII · FLOW MATCHING</p><h1>Flow Matching：直接学习“样本应该往哪里流”</h1>
+<p class="lead">Diffusion 把生成写成很多个去噪步骤。Flow Matching 把时间变成连续变量，并把生成问题写成一个更直接的问题：在每个时间 t、空间位置 x，样本应该以怎样的速度移动，才能把简单分布运输成数据分布？</p>
+
+<div class="callout"><b>这一 Part 的最终目标</b><p>理解并能够自己解释：</p>
+\[
+\frac{dx_t}{dt}=v_\theta(x_t,t)
+\]
+<p>以及训练目标：</p>
+\[
+\mathcal L_{CFM}
+=
+\mathbb E
+\left[
+\|v_\theta(x_t,t)-u_t(x_t|z)\|^2
+\right]
+\]
+<p>这里的每个符号都会从 ODE、向量场和概率路径自然产生，而不是突然出现。</p></div>
+
+<h2>先把 Flow Matching 与 Diffusion 的问题语言区分开</h2>
+<div class="concept-grid">
+<div><b>Diffusion 常见语言</b><p>给数据加噪，学习反向去噪或 score。</p></div>
+<div><b>Flow Matching 语言</b><p>指定一条概率路径，直接学习产生这条路径的速度场。</p></div>
+<div><b>共同目标</b><p>把简单基础分布运输到复杂数据分布。</p></div>
+</div>
+<p>Flow Matching 最初是作为训练 Continuous Normalizing Flows 的 simulation-free 方法提出的；它可以使用扩散式概率路径，也可以使用其他路径，例如 Optimal Transport 风格的路径。</p>
+</section>
+
+<section id="43"><h2>43 · 从离散步骤到连续时间</h2>
+
+<h3>43.1 Diffusion 的离散时间</h3>
+<p>上一 Part 中时间是：</p>
+\[
+t=0,1,2,\ldots,T
+\]
+<p>状态按照：</p>
+\[
+x_T\to x_{T-1}\to\cdots\to x_0
+\]
+<p>一步步变化。</p>
+
+<h3>43.2 如果时间步越来越小</h3>
+<p>把总时间缩放到区间：</p>
+\[
+t\in[0,1]
+\]
+<p>并让每一步间隔：</p>
+\[
+\Delta t
+\]
+<p>越来越小。</p>
+<p>离散更新：</p>
+\[
+x_{t+\Delta t}
+=
+x_t
++
+v_t(x_t)\Delta t
+\]
+<p>两边减去 \(x_t\)，再除以 \(\Delta t\)：</p>
+\[
+\frac{x_{t+\Delta t}-x_t}{\Delta t}
+=
+v_t(x_t)
+\]
+<p>让 \(\Delta t\to0\)，左边就是导数：</p>
+\[
+\boxed{
+\frac{dx_t}{dt}
+=
+v_t(x_t)
+}
+\]
+
+<h3>43.3 这条式子的直觉</h3>
+<p>它说的只是：</p>
+<div class="flow">当前位置 x + 当前速度 v × 极短时间 dt → 下一瞬间的位置</div>
+<p>Flow Matching 的主要对象，就是这个随时间变化的速度函数 \(v_t(x)\)。</p>
+</section>
+
+<section id="44"><h2>44 · ODE：已知速度规则，怎样得到完整轨迹？</h2>
+
+<h3>44.1 ODE 是什么？</h3>
+<p>ODE 是 Ordinary Differential Equation，常微分方程。</p>
+<p>最简单形式：</p>
+\[
+\frac{dx}{dt}=v(x,t)
+\]
+<p>它没有直接告诉我们 x 在每个时刻是多少，而是告诉我们“每一时刻应该怎样变化”。</p>
+
+<h3>44.2 最简单例子</h3>
+<p>如果：</p>
+\[
+\frac{dx}{dt}=2
+\]
+<p>表示速度恒定为 2。若：</p>
+\[
+x(0)=3
+\]
+<p>那么：</p>
+\[
+x(t)=3+2t
+\]</p>
+
+<h3>44.3 速度依赖当前位置</h3>
+<p>如果：</p>
+\[
+\frac{dx}{dt}=-x
+\]
+<p>当前位置为正时速度向左，当前位置越远速度越大。它的解是：</p>
+\[
+x(t)=x(0)e^{-t}
+\]
+<p>所以所有点都会逐渐靠近 0。</p>
+
+<h3>44.4 生成模型需要多维 ODE</h3>
+<p>图像或潜变量是向量：</p>
+\[
+x(t)\in\mathbb R^d
+\]
+<p>因此速度也是向量：</p>
+\[
+v_t(x)\in\mathbb R^d
+\]
+<p>ODE：</p>
+\[
+\frac{dx_t}{dt}=v_t(x_t)
+\]
+<p>表示 d 个坐标同时按速度场变化。</p>
+
+<h3>44.5 没有解析解怎么办？</h3>
+<p>神经网络定义的 \(v_\theta(x,t)\) 通常没有像 \(3+2t\) 那样简单的闭式解，所以采样时使用数值 ODE solver。</p>
+<p>最简单的 Euler 方法：</p>
+\[
+x_{t+\Delta t}
+\approx
+x_t+
+v_\theta(x_t,t)\Delta t
+\]
+<p>更高阶方法会更精确，但主线思想不变。</p>
+</section>
+
+<section id="45"><h2>45 · 向量场：空间中的每个位置都有一个箭头</h2>
+
+<h3>45.1 从单个速度到整张“速度地图”</h3>
+<p>函数：</p>
+\[
+v_t:\mathbb R^d\to\mathbb R^d
+\]
+<p>对每个位置 x 都给出一个速度向量。</p>
+<p>在二维空间中，可以想象平面上的每一个点都放着一支箭头：</p>
+<div class="flow">箭头方向 = 应该往哪里移动　　箭头长度 = 移动速度有多大</div>
+<p>整套箭头就叫向量场（vector field）。</p>
+
+<h3>45.2 时间相关向量场</h3>
+<p>Flow Matching 使用：</p>
+\[
+v_t(x)
+\]
+<p>因此同一个空间位置 x，在不同时间 t 可以有不同箭头。</p>
+
+<h3>45.3 一个样本的轨迹</h3>
+<p>从初始点：</p>
+\[
+x_0
+\]
+<p>出发，遵循 ODE：</p>
+\[
+\frac{dx_t}{dt}=v_t(x_t)
+\]
+<p>会得到一条连续轨迹：</p>
+\[
+x_0\to x_{0.1}\to x_{0.2}\to\cdots\to x_1
+\]</p>
+
+<h3>45.4 Flow 是什么？</h3>
+<p>如果对每一个初始点都运行这个 ODE，就得到一个随时间变化的映射：</p>
+\[
+\phi_t(x_0)=x_t
+\]
+<p>它把初始空间中的点整体搬运到 t 时刻的位置，这个映射族常称为 flow。</p>
+</section>
+
+<section id="46"><h2>46 · 不只是点在移动：整个概率分布也在移动</h2>
+
+<h3>46.1 从一堆粒子理解分布</h3>
+<p>假设初始时刻采样很多点：</p>
+\[
+x_0^{(1)},x_0^{(2)},\ldots
+\sim p_0
+\]
+<p>每一个点都遵循同一个 ODE。</p>
+<p>在 t 时刻，这些点形成新的分布：</p>
+\[
+p_t(x)
+\]</p>
+
+<h3>46.2 生成模型希望什么？</h3>
+<p>通常选择简单基础分布：</p>
+\[
+p_0=p_{base}
+\]
+<p>例如：</p>
+\[
+p_0=\mathcal N(0,I)
+\]
+<p>希望经过流之后：</p>
+\[
+p_1=p_{data}
+\]
+<p>因此：</p>
+<div class="flow">简单噪声分布 \(p_0\) → 连续向量场运输 → 数据分布 \(p_1\)</div>
+
+<h3>46.3 “概率路径”是什么？</h3>
+<p>从 \(p_0\) 到 \(p_1\) 的整个中间分布族：</p>
+\[
+p_t,\qquad t\in[0,1]
+\]
+<p>叫概率路径（probability path）。</p>
+<p>注意：</p>
+<div class="warning"><b>概率路径不是单个样本的轨迹</b><p>\(x_t\) 描述一个粒子怎样移动；\(p_t\) 描述无数粒子在时刻 t 的整体分布。</p></div>
+</section>
+
+<section id="47"><h2>47 · 连续性方程：概率质量不能凭空消失</h2>
+
+<h3>47.1 从水流直觉开始</h3>
+<p>想象一个装满水的管道。某个小区域里的水量减少，只可能因为流出去的水比流进来的多；如果没有水源或排水口，水不能凭空消失。</p>
+<p>概率密度在向量场中运动也是同样道理。</p>
+
+<h3>47.2 散度 divergence</h3>
+<p>对向量场：</p>
+\[
+v(x)
+=
+(v_1(x),\ldots,v_d(x))
+\]
+<p>定义散度：</p>
+\[
+\nabla\cdot v
+=
+\sum_{i=1}^{d}
+\frac{\partial v_i}{\partial x_i}
+\]
+<p>直觉上，它描述一个极小区域附近“总体往外流”的程度。</p>
+
+<h3>47.3 连续性方程</h3>
+<p>概率密度 \(p_t(x)\) 在速度场 \(v_t(x)\) 下演化必须满足：</p>
+\[
+\boxed{
+\frac{\partial p_t(x)}{\partial t}
++
+\nabla\cdot
+\left(
+p_t(x)v_t(x)
+\right)
+=
+0
+}
+\]
+<p>第一项表示某位置概率密度随时间的变化。</p>
+<p>第二项表示概率流 \(p_tv_t\) 从该区域净流出的程度。</p>
+
+<h3>47.4 为什么这个方程重要？</h3>
+<p>ODE：</p>
+\[
+\dot x_t=v_t(x_t)
+\]
+<p>描述单个粒子怎么走；连续性方程：</p>
+\[
+\partial_t p_t+\nabla\cdot(p_tv_t)=0
+\]
+<p>描述一整群粒子的概率分布怎么变。</p>
+<div class="callout"><b>Flow Matching 的核心任务</b><p>给定想要的概率路径 \(p_t\)，找到或学习一个速度场 \(v_t\)，使它通过连续性方程真正生成这条概率路径。</p></div>
+</section>
+
+<section id="48"><h2>48 · Continuous Normalizing Flow：用 ODE 运输概率分布</h2>
+
+<h3>48.1 Normalizing Flow 的目标</h3>
+<p>Normalizing Flow 希望建立简单分布与复杂数据分布之间的可逆变换。</p>
+<p>Continuous Normalizing Flow（CNF）把变换写成连续 ODE：</p>
+\[
+\frac{dx_t}{dt}=v_\theta(x_t,t)
+\]</p>
+
+<h3>48.2 从基础分布采样</h3>
+\[
+x_0\sim p_0
+\]
+<p>运行 ODE 到 t=1：</p>
+\[
+x_1=\phi_1(x_0)
+\]
+<p>如果学习正确，最终：</p>
+\[
+x_1\sim p_{data}
+\]</p>
+
+<h3>48.3 密度本身怎样沿 ODE 改变？</h3>
+<p>沿着轨迹，可以得到瞬时 change-of-variables 关系：</p>
+\[
+\frac{d}{dt}\log p_t(x_t)
+=
+-
+\nabla\cdot v_t(x_t)
+\]
+<p>这可以从连续性方程推导得到。它允许 CNF 计算 likelihood，但传统 maximum-likelihood 训练往往需要同时求解 ODE，并计算 divergence，成本较高。</p>
+
+<h3>48.4 Flow Matching 改变训练方式</h3>
+<p>Flow Matching 的关键贡献之一，就是：</p>
+<div class="flow">不在训练过程中模拟模型 ODE → 直接把速度场学习变成监督回归</div>
+<p>这就是“simulation-free training”的含义。生成时仍需要积分 ODE，但训练目标本身不需要先运行当前模型的完整 flow。</p>
+</section>
+
+<section id="49"><h2>49 · Flow Matching：如果知道正确速度场，直接回归它</h2>
+
+<h3>49.1 假设我们已经选好概率路径</h3>
+<p>设：</p>
+\[
+p_t(x),\qquad t\in[0,1]
+\]
+<p>满足：</p>
+\[
+p_0=p_{base},\qquad p_1=p_{data}
+\]
+<p>假设还存在一个真实速度场：</p>
+\[
+u_t(x)
+\]
+<p>它通过连续性方程生成这条路径。</p>
+
+<h3>49.2 最自然的监督学习目标</h3>
+<p>用神经网络：</p>
+\[
+v_\theta(x,t)
+\]
+<p>去拟合真实速度：</p>
+\[
+\boxed{
+\mathcal L_{FM}(\theta)
+=
+\mathbb E_{
+t\sim U[0,1],
+x\sim p_t
+}
+\left[
+\|
+v_\theta(x,t)-u_t(x)
+\|^2
+\right]
+}
+\]</p>
+
+<h3>49.3 为什么这么简单？</h3>
+<p>如果对所有 t 和 x 都有：</p>
+\[
+v_\theta(x,t)=u_t(x)
+\]
+<p>那么神经 ODE 就拥有生成 \(p_t\) 的正确速度场，因此从 \(p_0\) 积分到 t=1 就能得到 \(p_1\)。</p>
+
+<h3>49.4 这里与 Diffusion 噪声 MSE 的相似性</h3>
+<div class="concept-grid">
+<div><b>Diffusion</b><p>回归噪声 / score。</p></div>
+<div><b>Flow Matching</b><p>回归速度向量。</p></div>
+<div><b>共同结构</b><p>把生成问题转化成在随机时间和随机位置上的监督回归。</p></div>
+</div>
+
+<h3>49.5 真正困难在哪里？</h3>
+<p>这个目标虽然漂亮，但里面需要：</p>
+\[
+u_t(x)
+\]
+<p>即边缘概率路径 \(p_t\) 的真实速度场。对于复杂数据分布，我们通常并不知道它。</p>
+<p>所以直接 Flow Matching 目标看起来又陷入了一个类似 VAE 的问题：理论目标很好，但监督信号本身难算。</p>
+</section>
+
+<section id="50"><h2>50 · 为什么直接 FM 难训练？“边缘速度场”从哪里来？</h2>
+
+<h3>50.1 我们拥有的是样本，不是完整数据密度</h3>
+<p>现实里我们有数据集：</p>
+\[
+x_1\sim p_{data}
+\]
+<p>但一般不知道 \(p_{data}(x)\) 的解析表达式，更不知道中间的：</p>
+\[
+p_t(x)
+\]
+<p>以及它的速度场：</p>
+\[
+u_t(x)
+\]</p>
+
+<h3>50.2 想法：把复杂边缘路径拆成简单条件路径</h3>
+<p>与 VAE 的思路有一点相似：困难对象不直接算，而是引入条件结构。</p>
+<p>我们先选一个条件变量 z，并为每个 z 定义容易处理的条件概率路径：</p>
+\[
+p_t(x|z)
+\]
+<p>以及对应的条件速度场：</p>
+\[
+u_t(x|z)
+\]
+<p>如果这些条件对象容易采样、速度也能解析计算，那么就有了监督信号。</p>
+
+<h3>50.3 边缘路径由条件路径混合得到</h3>
+<p>设 z 服从某个分布 q(z)：</p>
+\[
+p_t(x)
+=
+\int p_t(x|z)q(z)dz
+\]
+<p>大量简单条件路径混合起来，就形成真正想要的边缘概率路径。</p>
+</section>
+
+<section id="51"><h2>51 · Conditional Flow Matching：为什么条件速度可以训练边缘速度？</h2>
+
+<h3>51.1 条件训练目标</h3>
+<p>Conditional Flow Matching（CFM）使用：</p>
+\[
+\boxed{
+\mathcal L_{CFM}
+=
+\mathbb E_{
+t,z,x\sim p_t(x|z)
+}
+\left[
+\|
+v_\theta(x,t)
+-
+u_t(x|z)
+\|^2
+\right]
+}
+\]</p>
+<p>现在 target：</p>
+\[
+u_t(x|z)
+\]
+<p>是我们人为选择的简单条件路径所对应的速度，因此可以计算。</p>
+
+<h3>51.2 但网络没有看到 z，怎么可能同时匹配不同条件速度？</h3>
+<p>这是 CFM 最关键的一点。</p>
+<p>固定某个 \((x,t)\)。不同条件 z 可能产生同一个位置 x，但给出不同条件速度：</p>
+\[
+u_t(x|z)
+\]
+<p>网络只输入 x,t，因此无法分别记住每个 z。平方误差的最优预测会取条件平均：</p>
+\[
+v^*(x,t)
+=
+\mathbb E[
+u_t(x|z)
+\mid
+x_t=x
+]
+\]</p>
+
+<h3>51.3 为什么平方误差的最优解是条件期望？</h3>
+<p>对固定 x，把随机 target 记作 U，预测一个向量 a。考虑：</p>
+\[
+\mathbb E[\|a-U\|^2|x]
+\]
+<p>令：</p>
+\[
+m=\mathbb E[U|x]
+\]
+<p>加入并减去 m：</p>
+\[
+a-U=(a-m)+(m-U)
+\]
+<p>平方并取期望，交叉项为 0，因为：</p>
+\[
+\mathbb E[m-U|x]=0
+\]
+<p>所以：</p>
+\[
+\mathbb E[\|a-U\|^2|x]
+=
+\|a-m\|^2
++
+\mathbb E[\|m-U\|^2|x]
+\]
+<p>第二项与 a 无关，因此最小时：</p>
+\[
+a=m
+\]
+<p>也就是条件期望。</p>
+
+<h3>51.4 这个条件平均恰好是什么？</h3>
+<p>在适当正则条件下：</p>
+\[
+\boxed{
+u_t(x)
+=
+\mathbb E[
+u_t(x|z)
+\mid
+x_t=x
+]
+}
+\]
+<p>正是生成边缘路径 \(p_t(x)\) 的边缘速度场。</p>
+
+<div class="callout"><b>CFM 的核心魔法并不是魔法</b><p>我们用容易计算的“条件速度”作为随机监督标签；神经网络在平方误差下学到它们对给定 x,t 的条件平均，而这个平均恰好是我们真正想要、却难以直接计算的边缘速度场。</p></div>
+
+<h3>51.5 FM 与 CFM 的目标关系</h3>
+<p>在常见条件下，CFM 与边缘 FM 对参数 \(\theta\) 具有相同的梯度；两者只相差与模型参数无关的项。因此优化 CFM 可以训练出同一个目标边缘场，而不必显式知道边缘速度。</p>
+</section>
+
+<section id="52"><h2>52 · 最直观的条件路径：在噪声与数据之间画直线</h2>
+
+<h3>52.1 取两个端点</h3>
+<p>从基础分布采样：</p>
+\[
+x_0\sim p_0
+\]
+<p>从数据分布采样：</p>
+\[
+x_1\sim p_1=p_{data}
+\]</p>
+
+<h3>52.2 定义线性插值</h3>
+\[
+\boxed{
+x_t=(1-t)x_0+t x_1
+}
+\]
+<p>检查端点：</p>
+\[
+x_{t=0}=x_0
+\]
+\[
+x_{t=1}=x_1
+\]</p>
+
+<h3>52.3 对时间求导</h3>
+\[
+\frac{dx_t}{dt}
+=
+-x_0+x_1
+\]
+<p>所以这条单个条件轨迹的速度为：</p>
+\[
+\boxed{
+u_t=x_1-x_0
+}
+\]
+<p>它甚至不依赖 t：每个样本沿直线以恒定速度从 x0 走到 x1。</p>
+
+<h3>52.4 于是训练变得异常直接</h3>
+<p>采样：</p>
+\[
+t\sim U[0,1]
+\]
+\[
+x_0\sim p_0,\qquad x_1\sim p_{data}
+\]
+<p>构造：</p>
+\[
+x_t=(1-t)x_0+t x_1
+\]
+<p>target：</p>
+\[
+u=x_1-x_0
+\]
+<p>Loss：</p>
+\[
+\boxed{
+\mathcal L
+=
+\mathbb E
+[
+\|
+v_\theta(x_t,t)-(x_1-x_0)
+\|^2
+]
+}
+\]</p>
+
+<h3>52.5 这就是所有 Flow Matching 吗？</h3>
+<p>不是。这是非常重要、直观的一类路径，但 Flow Matching 的框架允许更一般的概率路径，包括 Gaussian / diffusion-style paths。</p>
+<p>原始 Flow Matching 工作的重要观点之一正是：训练方法与具体路径设计可以分离。</p>
+
+<h3>52.6 source-target 配对很重要</h3>
+<p>如果 x0 与 x1 完全独立随机配对，很多直线路径可能相互穿越，边缘速度场需要对冲这些不同方向。</p>
+<p>这不会让 CFM 理论失效，但可能让学到的流更弯、更复杂，数值积分需要更多工作。</p>
+</section>
+
+<section id="53"><h2>53 · Optimal Transport：为什么“更聪明地配对”能得到更直的流？</h2>
+
+<h3>53.1 配对就是 coupling</h3>
+<p>我们不一定要独立采样 x0 和 x1。可以定义一个联合分布：</p>
+\[
+\pi(x_0,x_1)
+\]
+<p>要求它的两个边缘分别仍是：</p>
+\[
+p_0(x_0),\qquad p_1(x_1)
+\]
+<p>这样的联合分布叫 coupling。</p>
+
+<h3>53.2 不同 coupling 会产生不同运输路径</h3>
+<p>例如二维空间中，噪声点在左边、数据点在右边。若随意配对，直线可能大量交叉。</p>
+<p>如果配对尽可能让相近、合理的端点对应，整体运输可能更简单。</p>
+
+<h3>53.3 Optimal Transport 的基本目标</h3>
+<p>经典平方欧氏成本下，可以寻找：</p>
+\[
+\min_{\pi}
+\mathbb E_{(x_0,x_1)\sim\pi}
+[
+\|x_1-x_0\|^2
+]
+\]
+<p>同时保持正确的 source / target 边缘分布。</p>
+
+<h3>53.4 OT-CFM 的直觉</h3>
+<p>如果用更接近 Optimal Transport 的 coupling，再沿端点做条件插值，通常会得到：</p>
+<div class="flow">更短、更一致的运输方向 → 更简单的向量场 → ODE 数值积分更容易</div>
+<p>后续 Conditional Flow Matching 工作提出了 OT-CFM 等变体，以更好的 coupling 构造更简单的流。</p>
+
+<h3>53.5 “直线条件路径”不等于“边缘轨迹一定全部是直线”</h3>
+<p>这是一个重要区分。</p>
+<p>训练标签来自每对 \((x_0,x_1)\) 的直线条件速度，但网络最终学的是这些条件速度在同一 \((x,t)\) 位置下的平均边缘场。</p>
+<p>因此神经 ODE 真正生成时的轨迹由边缘场决定，未必与训练中任何一条具体条件直线完全相同。</p>
+</section>
+
+<section id="54"><h2>54 · Flow Matching 与 Diffusion / Score 到底是什么关系？</h2>
+
+<h3>54.1 它们都在构造中间概率路径</h3>
+<p>Diffusion 有：</p>
+\[
+p_t
+\]
+<p>从数据逐渐走向噪声；生成时反过来。</p>
+<p>Flow Matching 同样关心：</p>
+\[
+p_t
+\]
+<p>但直接学习产生概率路径的确定性速度场。</p>
+
+<h3>54.2 Diffusion 常学习 score</h3>
+\[
+s_t(x)
+=
+\nabla_x\log p_t(x)
+\]
+<p>它告诉我们当前密度“往高概率区域增长最快的方向”。</p>
+
+<h3>54.3 Flow Matching 学 velocity</h3>
+\[
+v_t(x)
+\]
+<p>它告诉我们粒子在此时此地“实际应该以什么速度移动”。</p>
+
+<div class="warning"><b>score 与 velocity 不是同一个对象</b><p>score 是一个概率密度的空间梯度；velocity 是概率质量运输的动力学速度。在特定 diffusion/SDE 路径下，二者可以通过已知漂移、扩散系数建立关系，但不能直接把两个符号画等号。</p></div>
+
+<h3>54.4 Probability Flow ODE 提供桥梁</h3>
+<p>连续时间 diffusion 可以写成 SDE，例如抽象形式：</p>
+\[
+dx=f(x,t)dt+g(t)dW_t
+\]
+<p>存在一个确定性的 probability flow ODE，其速度场包含 score 项，形式为：</p>
+\[
+\frac{dx}{dt}
+=
+f(x,t)
+-
+\frac12g(t)^2
+\nabla_x\log p_t(x)
+\]
+<p>这个 ODE 与相应 SDE 可以共享相同的时刻边缘分布。</p>
+<p>因此：</p>
+<div class="flow">Score-based Diffusion ← 概率路径 → Probability Flow ODE → Flow / Vector-field 视角</div>
+
+<h3>54.5 Flow Matching 可以使用 diffusion path</h3>
+<p>Flow Matching 并不要求概率路径必须是直线。原始 FM 框架明确允许 Gaussian probability paths，并包含 diffusion paths 作为重要特例。</p>
+<p>所以“Diffusion 和 Flow Matching”不是两个完全没有交集的世界，更准确地说，它们是对连续生成动力学的不同参数化与训练方式。</p>
+</section>
+
+<section id="55"><h2>55 · 一个完整 Flow Matching 模型怎样训练和生成？</h2>
+
+<h3>55.1 训练：最简单线性 CFM 版本</h3>
+<p><b>步骤 1：采基础样本</b></p>
+\[
+x_0\sim p_0
+\]
+<p>例如标准高斯。</p>
+
+<p><b>步骤 2：采数据</b></p>
+\[
+x_1\sim p_{data}
+\]
+
+<p><b>步骤 3：采时间</b></p>
+\[
+t\sim U[0,1]
+\]
+
+<p><b>步骤 4：构造中间点</b></p>
+\[
+x_t=(1-t)x_0+t x_1
+\]
+
+<p><b>步骤 5：计算条件速度 target</b></p>
+\[
+u=x_1-x_0
+\]
+
+<p><b>步骤 6：网络回归速度</b></p>
+\[
+\mathcal L
+=
+\|
+v_\theta(x_t,t)-u
+\|^2
+\]</p>
+
+<h3>55.2 与 Diffusion 训练流程对比</h3>
+<div class="concept-grid">
+<div><b>Diffusion</b><p>采 \(x_0,t,\epsilon\) → 构造带噪 \(x_t\) → 预测 \(\epsilon\) 或 score。</p></div>
+<div><b>Flow Matching</b><p>采 source、target、t → 构造路径中间点 → 预测 velocity。</p></div>
+<div><b>相同风格</b><p>都无需在每个 SGD step 中先完整运行生成轨迹，再获得训练标签。</p></div>
+</div>
+
+<h3>55.3 生成</h3>
+<p>训练结束后：</p>
+\[
+x(0)\sim p_0
+\]
+<p>求解：</p>
+\[
+\frac{dx(t)}{dt}
+=
+v_\theta(x(t),t)
+\]
+<p>从 t=0 积分到 t=1：</p>
+\[
+x(1)\approx p_{data}
+\]</p>
+
+<h3>55.4 生成时为什么不再需要 x1？</h3>
+<p>训练时 x1 只用于构造条件路径和速度监督。</p>
+<p>神经网络学到的是边缘速度函数：</p>
+\[
+v_\theta(x,t)
+\]
+<p>推理时给它当前 x 和 t 就可以决定下一步移动方向，不需要提前知道最终真实样本。</p>
+
+<h3>55.5 条件生成怎么办？</h3>
+<p>如果希望按文字、类别、图像条件 c 生成，可以把条件一起送入速度网络：</p>
+\[
+v_\theta(x,t,c)
+\]
+<p>这里 c 是“生成条件”，与 CFM 中用来构造条件概率路径的数学 conditioning variable 不应机械混为一个概念。二者可以同时存在。</p>
+</section>
+
+<section id="summary"><h2>Part VII · Flow Matching 知识闭环</h2>
+
+<h3>1. 样本按照 ODE 移动</h3>
+\[
+\boxed{
+\frac{dx_t}{dt}
+=
+v_t(x_t)
+}
+\]
+
+<h3>2. 向量场推动整个概率分布</h3>
+\[
+p_0
+\xrightarrow{v_t}
+p_t
+\xrightarrow{v_t}
+p_1
+\]
+
+<h3>3. 概率守恒由连续性方程描述</h3>
+\[
+\boxed{
+\partial_t p_t
++
+\nabla\cdot(p_tv_t)
+=
+0
+}
+\]
+
+<h3>4. 理想 Flow Matching</h3>
+\[
+\mathcal L_{FM}
+=
+\mathbb E_{t,x\sim p_t}
+[
+\|v_\theta(x,t)-u_t(x)\|^2
+]
+\]
+
+<h3>5. 边缘速度难算，于是构造条件路径</h3>
+\[
+p_t(x)
+=
+\int p_t(x|z)q(z)dz
+\]
+
+<h3>6. Conditional Flow Matching</h3>
+\[
+\boxed{
+\mathcal L_{CFM}
+=
+\mathbb E
+[
+\|v_\theta(x_t,t)-u_t(x_t|z)\|^2
+]
+}
+\]
+
+<h3>7. CFM 为什么有效</h3>
+\[
+\boxed{
+u_t(x)
+=
+\mathbb E[
+u_t(x|z)
+\mid x_t=x
+]
+}
+\]
+<p>平方回归会自动学到这个条件平均，因此恢复真正需要的边缘速度场。</p>
+
+<h3>8. 最简单线性路径</h3>
+\[
+x_t=(1-t)x_0+t x_1
+\]
+\[
+\boxed{
+u_t=x_1-x_0
+}
+\]
+
+<h3>9. 生成只需解 ODE</h3>
+\[
+x_0\sim p_{base}
+\]
+\[
+\dot x_t=v_\theta(x_t,t)
+\]
+\[
+x_1\sim p_{data}
+\]
+
+<div class="callout"><b>到这里可以用一句话区分三个模型</b><p>VAE：学习潜变量概率模型并优化 ELBO。<br>Diffusion：学习如何逆转逐步噪声过程，常参数化噪声或 score。<br>Flow Matching：选定概率路径，直接监督学习推动该路径的速度场。</p></div>
+
+<h3>参考来源</h3>
+<p class="small">Y. Lipman et al., <a href="https://arxiv.org/abs/2210.02747">Flow Matching for Generative Modeling</a>, ICLR 2023.</p>
+<p class="small">A. Tong et al., <a href="https://arxiv.org/abs/2302.00482">Improving and Generalizing Flow-Based Generative Models with Minibatch Optimal Transport</a>, 2023.</p>
+<p class="small">Y. Lipman et al., <a href="https://arxiv.org/abs/2412.06264">Flow Matching Guide and Code</a>, 2024.</p>
+
+<div class="pager"><a href="part6.html">← Part VI Diffusion</a><a href="index.html">返回课程首页</a></div>
+</section>
+
+<footer>FishTank · Generative Models from First Principles · Part VII</footer>
+</article></main></body></html>
