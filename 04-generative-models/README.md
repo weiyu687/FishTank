@@ -10,7 +10,7 @@
 - ✅ Part IV 变分推断：难解后验、近似后验、Jensen、ELBO
 - ✅ Part V VAE：从 AE 到 VAE、重参数化、KL 与重建项
 - ✅ Part VI Diffusion：前向扩散、反向过程、DDPM、Score
-- ⏳ Part VII Flow Matching：ODE、向量场、概率路径、连续性方程、CFM
+- ✅ Part VII Flow Matching：ODE、向量场、概率路径、连续性方程、CFM
 - ⏳ Part VIII 统一视角：VAE / Diffusion / Score / Flow Matching
 
 网页版本位于仓库的 `docs/` 目录，由 GitHub Pages 托管。
