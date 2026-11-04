@@ -13,7 +13,7 @@
 - ✅ Part VII Flow Matching：ODE、向量场、概率路径、连续性方程、CFM
 - ✅ Part VIII 统一视角：VAE / Diffusion / Score / Flow Matching
 
-网页版本位于仓库的 `docs/` 目录，由 GitHub Pages 托管。
+网页版本现作为 FishTank 知识树中的独立知识体系，位于 `docs/generative-models/`，由同一个 GitHub Pages 站点托管。
 
 ## 内容原则
 
@@ -28,3 +28,13 @@
 ✅ 核心八个 Part 已全部完成：从零基础概率论一路建立到 VAE、Diffusion、Score 与 Flow Matching 的统一视角。
 
 后续可作为第二阶段继续扩展专题附录：线性代数、多元微积分、SDE、DDIM、Classifier-Free Guidance、Latent Diffusion、Rectified Flow、OT-CFM、Schrödinger Bridge 等。
+
+
+## Pages 信息架构
+
+- `docs/index.html`：FishTank 总知识树主页
+- `docs/generative-models/index.html`：生成模型数学基础课程首页
+- `docs/generative-models/part1.html` ～ `part8.html`：八个完整 Part
+- `docs/part1.html` ～ `part8.html`：兼容旧链接的重定向页
+
+后续新增知识体系时，在 `docs/<knowledge-system>/` 下建立独立子站，并从 FishTank 总知识树主页添加入口即可，无需新增 GitHub Pages 项目。
