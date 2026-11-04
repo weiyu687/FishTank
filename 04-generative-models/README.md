@@ -11,7 +11,7 @@
 - ✅ Part V VAE：从 AE 到 VAE、重参数化、KL 与重建项
 - ✅ Part VI Diffusion：前向扩散、反向过程、DDPM、Score
 - ✅ Part VII Flow Matching：ODE、向量场、概率路径、连续性方程、CFM
-- ⏳ Part VIII 统一视角：VAE / Diffusion / Score / Flow Matching
+- ✅ Part VIII 统一视角：VAE / Diffusion / Score / Flow Matching
 
 网页版本位于仓库的 `docs/` 目录，由 GitHub Pages 托管。
 
@@ -21,3 +21,10 @@
 2. 关键公式不跳步；每个重要等号或不等号说明依据。
 3. 同时给出直觉解释、数学定义、生成模型中的作用。
 4. 若某个数学工具暂不展开证明，会明确标记为可选深入或后续章节内容。
+
+
+## 第一阶段课程状态
+
+✅ 核心八个 Part 已全部完成：从零基础概率论一路建立到 VAE、Diffusion、Score 与 Flow Matching 的统一视角。
+
+后续可作为第二阶段继续扩展专题附录：线性代数、多元微积分、SDE、DDIM、Classifier-Free Guidance、Latent Diffusion、Rectified Flow、OT-CFM、Schrödinger Bridge 等。
