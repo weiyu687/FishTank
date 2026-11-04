@@ -1,0 +1,700 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Part VIII 统一视角 · FishTank</title><link rel="stylesheet" href="../assets/style.css"><script>window.MathJax={tex:{inlineMath:[['\\(','\\)']],displayMath:[['\\[','\\]']]}};</script><script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head><body>
+<aside><div class="brand">🐟 FishTank</div><div class="course">Part VIII · 统一视角</div><nav><a href="../index.html">← FishTank 知识树</a><a href="index.html">生成模型课程首页</a><hr>
+<a href="index.html">← 课程首页</a><a href="part5.html">Part V VAE</a><a href="part6.html">Part VI Diffusion</a><a href="part7.html">Part VII Flow Matching</a><hr>
+<a class="active" href="#intro">Part VIII 导读</a><a href="#56">56 所有生成模型在解决什么</a><a href="#57">57 三层统一框架</a><a href="#58">58 VAE：潜变量与推断</a><a href="#59">59 Diffusion：逐步反演噪声</a><a href="#60">60 Score：密度几何</a><a href="#61">61 Flow Matching：概率运输</a><a href="#62">62 ε / x0 / score / v 的转换</a><a href="#63">63 四类训练目标对照</a><a href="#64">64 四类采样过程对照</a><a href="#65">65 它们真正的相同与不同</a><a href="#66">66 从零看一遍完整知识树</a><a href="#67">67 下一步如何继续</a><a href="#summary">最终总结</a>
+</nav></aside>
+<main><article>
+
+<section id="intro"><p class="eyebrow">PART VIII · A UNIFIED VIEW</p><h1>统一视角：VAE、Diffusion、Score 与 Flow Matching 到底在做同一件什么事？</h1>
+<p class="lead">前面七个 Part 分别建立了概率、变分推断、VAE、Diffusion 与 Flow Matching。最后这一 Part 不再追求“更多公式”，而是回答一个更重要的问题：这些模型为什么看起来完全不同，却又不断出现高斯、KL、噪声、score、velocity 和 ODE？</p>
+
+<div class="callout"><b>统一，但不混淆</b><p>这些模型都试图学习复杂数据分布，但它们选择的隐藏变量、训练目标和生成动力学并不相同。真正好的统一视角应该告诉你“共同核心在哪里”，也应该告诉你“哪些东西绝对不能直接画等号”。</p></div>
+
+<h2>我们最终要回答六个问题</h2>
+<p>1. 模型认为“数据是怎样产生的”？<br>
+2. 训练时网络到底预测什么？<br>
+3. Loss 从哪里来？<br>
+4. 生成时从什么分布开始？<br>
+5. 生成过程是随机的还是确定的？<br>
+6. score、noise、velocity 什么时候可以互相转换？</p>
+</section>
+
+<section id="56"><h2>56 · 所有生成模型都在逼近同一个目标：\(p_{data}\)</h2>
+
+<h3>56.1 我们真正拥有的是什么？</h3>
+<p>现实中，我们没有真实数据密度：</p>
+\[
+p_{data}(x)
+\]
+<p>的解析公式。</p>
+<p>我们只有一批样本：</p>
+\[
+x^{(1)},x^{(2)},\ldots,x^{(N)}
+\sim p_{data}
+\]</p>
+
+<h3>56.2 生成模型希望做到什么？</h3>
+<p>训练一个模型，使它定义的分布：</p>
+\[
+p_\theta(x)
+\]
+<p>尽量接近：</p>
+\[
+p_{data}(x)
+\]
+<p>这样我们就可以从模型中采样：</p>
+\[
+x\sim p_\theta
+\]
+<p>得到新的、与训练数据分布相似的样本。</p>
+
+<h3>56.3 为什么不直接学习一个函数 \(p_\theta(x)\)？</h3>
+<p>因为真实数据空间通常极高维，并且分布结构非常复杂。直接为任意 x 给出一个规范化概率密度既困难，也很难有效采样。</p>
+<p>所以现代生成模型大多会引入“辅助结构”：</p>
+<div class="concept-grid">
+<div><b>VAE</b><p>引入潜变量 z，把复杂 x 解释为从简单 z 生成。</p></div>
+<div><b>Diffusion / Score</b><p>引入时间 t 与噪声状态 \(x_t\)，把复杂生成拆成连续或离散的小步骤。</p></div>
+<div><b>Flow Matching</b><p>引入时间 t 与向量场，把简单分布连续运输到数据分布。</p></div>
+</div>
+
+<h3>56.4 一个最重要的共同图景</h3>
+<div class="flow">容易采样的简单分布 → 学习到的变换 / 动力学 → 复杂数据分布</div>
+<p>区别只在于：“中间那座桥”到底怎样定义。</p>
+</section>
+
+<section id="57"><h2>57 · 三层统一框架：分布、学习对象、动力学</h2>
+
+<h3>57.1 第一层：分布层</h3>
+<p>问：</p>
+<div class="flow">起点分布是谁？终点分布是谁？中间是否定义概率路径？</div>
+
+<p><b>VAE：</b></p>
+\[
+z\sim p(z)
+\]
+\[
+x\sim p_\theta(x|z)
+\]
+
+<p><b>Diffusion / Score / Flow：</b></p>
+\[
+p_{simple}
+\longleftrightarrow
+p_t
+\longleftrightarrow
+p_{data}
+\]</p>
+
+<h3>57.2 第二层：学习对象层</h3>
+<p>问：</p>
+<div class="flow">神经网络真正被监督去预测哪个数学对象？</div>
+
+<p>可能是：</p>
+\[
+q_\phi(z|x)
+\]
+<p>可能是：</p>
+\[
+\epsilon_\theta(x_t,t)
+\]
+<p>可能是：</p>
+\[
+s_\theta(x_t,t)
+\approx
+\nabla_x\log p_t(x)
+\]
+<p>也可能是：</p>
+\[
+v_\theta(x_t,t)
+\]</p>
+
+<h3>57.3 第三层：动力学 / 采样层</h3>
+<p>问：</p>
+<div class="flow">训练结束后，怎样真正产生一个新样本？</div>
+
+<p>可能一次 Decoder 就完成，也可能需要反复应用随机去噪转移，也可能求解 SDE / ODE。</p>
+
+<div class="callout"><b>以后读任何新生成模型论文</b><p>先不要被模型名字吸引。先问这三层：它定义了什么分布？网络回归什么量？采样动力学是什么？通常很快就能看清它与已有方法的关系。</p></div>
+</section>
+
+<section id="58"><h2>58 · VAE：把难的观测分布变成“潜变量 + 条件生成”</h2>
+
+<h3>58.1 VAE 的核心生成故事</h3>
+\[
+z\sim p(z)
+\]
+\[
+x\sim p_\theta(x|z)
+\]
+<p>因此：</p>
+\[
+p_\theta(x)
+=
+\int p_\theta(x|z)p(z)dz
+\]</p>
+
+<h3>58.2 真正困难的是后验推断</h3>
+\[
+p_\theta(z|x)
+=
+\frac{p_\theta(x|z)p(z)}
+{p_\theta(x)}
+\]
+<p>因为分母边缘似然难算，所以引入：</p>
+\[
+q_\phi(z|x)
+\approx
+p_\theta(z|x)
+\]</p>
+
+<h3>58.3 网络到底在学什么？</h3>
+<p>Encoder 学：</p>
+\[
+q_\phi(z|x)
+\]
+<p>Decoder 学：</p>
+\[
+p_\theta(x|z)
+\]</p>
+
+<h3>58.4 Loss 是什么？</h3>
+\[
+\mathcal L_{ELBO}
+=
+\mathbb E_q[
+\log p_\theta(x|z)
+]
+-
+D_{KL}(q_\phi(z|x)\|p(z))
+\]</p>
+
+<h3>58.5 生成动力学</h3>
+<p>生成时：</p>
+\[
+z\sim p(z)
+\]
+<p>然后通常一次 Decoder 前向：</p>
+\[
+z\to x
+\]</p>
+
+<h3>58.6 VAE 的核心关键词</h3>
+<div class="flow">Latent Variable · Posterior Inference · ELBO · Decoder Likelihood</div>
+</section>
+
+<section id="59"><h2>59 · Diffusion：把一个困难逆映射拆成许多简单去噪步骤</h2>
+
+<h3>59.1 前向过程</h3>
+<p>从数据出发逐步加噪：</p>
+\[
+x_0\sim p_{data}
+\]
+\[
+x_t
+=
+\sqrt{\bar\alpha_t}x_0
++
+\sqrt{1-\bar\alpha_t}\epsilon
+\]
+<p>最终：</p>
+\[
+x_T\approx\mathcal N(0,I)
+\]</p>
+
+<h3>59.2 生成模型学习逆过程</h3>
+\[
+p_\theta(x_{t-1}|x_t)
+\]
+<p>经典 DDPM 常让网络预测：</p>
+\[
+\epsilon_\theta(x_t,t)
+\]</p>
+
+<h3>59.3 Loss</h3>
+<p>常用简化目标：</p>
+\[
+\mathbb E
+[
+\|
+\epsilon
+-
+\epsilon_\theta(x_t,t)
+\|^2
+]
+\]</p>
+
+<h3>59.4 生成动力学</h3>
+<p>从：</p>
+\[
+x_T\sim\mathcal N(0,I)
+\]
+<p>开始，反复运行：</p>
+\[
+x_T\to x_{T-1}\to\cdots\to x_0
+\]</p>
+
+<h3>59.5 DDPM 的核心关键词</h3>
+<div class="flow">Forward Corruption · Reverse Markov Chain · Denoising · Noise Prediction</div>
+
+<div class="callout"><b>DDPM 仍然有变分推断血统</b><p>原始 DDPM 的训练可以从变分下界分解得到一系列反向条件分布之间的 KL。它并不是与前面的 ELBO 世界完全断开的另一套数学。DDPM 原始工作也明确讨论了 variational bound 与 denoising score matching 的联系。</p></div>
+</section>
+
+<section id="60"><h2>60 · Score-based Model：不直接预测密度，而学习“密度往哪里升高”</h2>
+
+<h3>60.1 Score 定义</h3>
+\[
+s_t(x)
+=
+\nabla_x\log p_t(x)
+\]
+<p>它不是概率值本身，而是 log density 在数据空间中的梯度。</p>
+
+<h3>60.2 为什么 score 比直接学习密度容易？</h3>
+<p>直接学习规范化密度往往需要处理配分常数或高维积分；score 对 log density 求导后，任何与 x 无关的规范化常数都会消失。</p>
+
+<h3>60.3 Diffusion 为什么自然产生 score？</h3>
+<p>对高斯扰动：</p>
+\[
+x_t
+=
+\alpha_t x_0
++
+\sigma_t\epsilon
+\]
+<p>条件 score：</p>
+\[
+\nabla_{x_t}
+\log q(x_t|x_0)
+=
+-
+\frac{\epsilon}{\sigma_t}
+\]
+<p>因此知道噪声就等价于知道一个缩放后的 score target。</p>
+
+<h3>60.4 连续时间生成</h3>
+<p>Score-based SDE 框架定义前向随机微分方程：</p>
+\[
+dx=f(x,t)dt+g(t)dW_t
+\]
+<p>对应的反向时间 SDE 依赖：</p>
+\[
+\nabla_x\log p_t(x)
+\]
+<p>因此训练好 score 后，可以从噪声通过 reverse SDE 生成数据。</p>
+
+<h3>60.5 Probability Flow ODE</h3>
+<p>同一个 SDE 边缘分布还对应一个确定性 ODE：</p>
+\[
+\boxed{
+\frac{dx}{dt}
+=
+f(x,t)
+-
+\frac12g(t)^2
+s_t(x)
+}
+\]
+<p>这里时间方向采用前向 SDE 的记号；生成时通常从噪声端反向积分。</p>
+
+<h3>60.6 Score 模型的核心关键词</h3>
+<div class="flow">Density Gradient · Denoising Score Matching · Reverse SDE · Probability Flow ODE</div>
+</section>
+
+<section id="61"><h2>61 · Flow Matching：直接学习概率质量如何移动</h2>
+
+<h3>61.1 选择一条概率路径</h3>
+\[
+p_0=p_{base}
+\]
+\[
+p_1=p_{data}
+\]
+<p>中间：</p>
+\[
+p_t,qquad t\in[0,1]
+\]</p>
+
+<h3>61.2 学习速度场</h3>
+\[
+\frac{dx_t}{dt}
+=
+v_t(x_t)
+\]
+<p>它必须满足连续性方程：</p>
+\[
+\partial_t p_t
++
+\nabla\cdot(p_tv_t)
+=
+0
+\]</p>
+
+<h3>61.3 网络预测什么？</h3>
+\[
+v_\theta(x,t)
+\]
+<p>即速度场。</p>
+
+<h3>61.4 CFM 如何提供训练 target？</h3>
+<p>构造容易计算的条件路径和条件速度：</p>
+\[
+u_t(x|z)
+\]
+<p>训练：</p>
+\[
+\mathbb E
+[
+\|
+v_\theta(x_t,t)
+-
+u_t(x_t|z)
+\|^2
+]
+\]</p>
+
+<h3>61.5 生成</h3>
+<p>从简单基础分布：</p>
+\[
+x(0)\sim p_0
+\]
+<p>解 ODE：</p>
+\[
+\dot x=v_\theta(x,t)
+\]
+<p>得到：</p>
+\[
+x(1)\sim p_{data}
+\]</p>
+
+<h3>61.6 Flow Matching 的核心关键词</h3>
+<div class="flow">Probability Path · Vector Field · Conditional Velocity · ODE Transport</div>
+</section>
+
+<section id="62"><h2>62 · 最容易混淆的一页：\(\epsilon\)、\(x_0\)、score、diffusion v、FM velocity</h2>
+
+<h3>62.1 先固定一个常见连续噪声表示</h3>
+<p>写成：</p>
+\[
+x_t
+=
+\alpha_t x_0
++
+\sigma_t\epsilon,
+\qquad
+\epsilon\sim\mathcal N(0,I)
+\]
+<p>很多 VP 类型参数化满足：</p>
+\[
+\alpha_t^2+\sigma_t^2=1
+\]</p>
+
+<h3>62.2 ε-prediction</h3>
+<p>网络预测加入的标准高斯噪声：</p>
+\[
+\hat\epsilon
+=
+\epsilon_\theta(x_t,t)
+\]</p>
+
+<h3>62.3 x0-prediction</h3>
+<p>如果知道噪声，可以解出干净数据估计：</p>
+\[
+\boxed{
+\hat x_0
+=
+\frac{x_t-\sigma_t\hat\epsilon}
+{\alpha_t}
+}
+\]
+<p>所以在已知 \(\alpha_t,\sigma_t\) 的情况下，预测 ε 与预测 x0 可以互相转换。</p>
+
+<h3>62.4 Score prediction</h3>
+<p>条件高斯 score：</p>
+\[
+s
+=
+-
+\frac{\epsilon}{\sigma_t}
+\]
+<p>因此常见噪声参数化下：</p>
+\[
+\boxed{
+\hat s_\theta(x_t,t)
+=
+-
+\frac{
+\epsilon_\theta(x_t,t)
+}{
+\sigma_t
+}
+}
+\]
+<p>严格说，训练中的条件去噪 target 经过条件期望对应边缘 score；Part VI 已经区分过这两者。</p>
+
+<h3>62.5 Diffusion 中的 v-prediction</h3>
+<p>一些 Diffusion 工作使用：</p>
+\[
+\boxed{
+v
+=
+\alpha_t\epsilon
+-
+\sigma_t x_0
+}
+\]
+<p>若：</p>
+\[
+\alpha_t^2+\sigma_t^2=1
+\]
+<p>则由 \(x_t\) 和 v 可以恢复：</p>
+\[
+\boxed{
+x_0
+=
+\alpha_t x_t
+-
+\sigma_t v
+}
+\]
+\[
+\boxed{
+\epsilon
+=
+\sigma_t x_t
++
+\alpha_t v
+}
+\]
+<p>所以 ε-pred、x0-pred、diffusion v-pred 可以看作同一个噪声状态的不同参数化坐标。</p>
+
+<h3>62.6 但 diffusion v-prediction 不等于 Flow Matching velocity</h3>
+<div class="warning"><b>这是非常常见的符号陷阱</b><p>Diffusion 文献中的 “v-prediction” 通常指 \(v=\alpha\epsilon-\sigma x_0\) 这种网络输出参数化。Flow Matching 中的 velocity \(v_t(x)\) 则是 ODE 中真正满足 \(dx/dt=v_t(x)\) 的时间导数。两者在某些特定参数化/路径下可能建立关系，但定义上绝不是因为都写字母 v 就相同。</p></div>
+
+<h3>62.7 Flow Matching 的线性 velocity</h3>
+<p>最简单直线路径：</p>
+\[
+x_t=(1-t)x_0+t x_1
+\]
+<p>真实条件速度：</p>
+\[
+\boxed{
+\frac{dx_t}{dt}
+=
+x_1-x_0
+}
+\]
+<p>这才是“trajectory derivative”意义上的 velocity。</p>
+</section>
+
+<section id="63"><h2>63 · 四类训练目标放在同一张桌子上</h2>
+
+<div class="compare-table-wrap"><table class="compare-table">
+<thead><tr><th>方法</th><th>网络学习对象</th><th>典型目标</th><th>数学来源</th></tr></thead>
+<tbody>
+<tr><td><b>VAE</b></td><td>近似后验 + Decoder likelihood</td><td>最大化 ELBO</td><td>变分推断 / KL 下界</td></tr>
+<tr><td><b>DDPM</b></td><td>噪声、x0 或其他反向参数化</td><td>常用噪声 MSE</td><td>变分 bound + 高斯反向 KL 化简</td></tr>
+<tr><td><b>Score</b></td><td>\(\nabla_x\log p_t(x)\)</td><td>Denoising score matching</td><td>score matching / reverse SDE</td></tr>
+<tr><td><b>Flow Matching</b></td><td>\(v_t(x)\)</td><td>velocity regression</td><td>概率路径 + 连续性方程 / CFM</td></tr>
+</tbody></table></div>
+
+<h3>63.1 为什么后三类 Loss 看起来都像 MSE？</h3>
+<p>因为它们都把“困难的分布学习问题”转化成了某个局部数学对象的回归：</p>
+<div class="flow">噪声 target · score target · velocity target → 神经网络监督学习</div>
+<p>但“都用 MSE”不意味着学的是同一个对象。</p>
+
+<h3>63.2 MSE 只是外壳，target 才决定模型意义</h3>
+<p>同样：</p>
+\[
+\|y-f_\theta(x)\|^2
+\]
+<p>如果 y 是噪声，模型学 denoiser；如果 y 是条件速度，模型学 flow；如果 y 是后验均值，又是另一件事。</p>
+</section>
+
+<section id="64"><h2>64 · 四类采样过程放在同一张桌子上</h2>
+
+<div class="compare-table-wrap"><table class="compare-table">
+<thead><tr><th>方法</th><th>生成起点</th><th>生成方式</th><th>典型特点</th></tr></thead>
+<tbody>
+<tr><td><b>VAE</b></td><td>\(z\sim p(z)\)</td><td>一次或少量 Decoder 前向</td><td>采样快；潜变量结构明确</td></tr>
+<tr><td><b>DDPM</b></td><td>高斯噪声</td><td>多步反向随机/离散去噪</td><td>经典形式步数较多</td></tr>
+<tr><td><b>Score-SDE</b></td><td>简单先验</td><td>数值求解 reverse SDE</td><td>随机连续动力学</td></tr>
+<tr><td><b>Probability Flow / FM</b></td><td>简单先验</td><td>数值求解 ODE</td><td>确定性轨迹（给定初值与 solver）</td></tr>
+</tbody></table></div>
+
+<h3>64.1 “确定性 ODE”不代表生成没有随机性</h3>
+<p>Flow Matching 的 ODE 在给定初始点后是确定的，但初始点本身来自随机分布：</p>
+\[
+x_0\sim p_{base}
+\]
+<p>因此不同随机初始噪声仍然产生不同样本。</p>
+
+<h3>64.2 “随机 SDE”与“确定性 ODE”可以共享边缘分布</h3>
+<p>Score-based SDE 中，一个 probability flow ODE 可以与对应 SDE 共享相同的时刻边缘分布。</p>
+<p>这说明：</p>
+<div class="callout"><b>同一组概率分布 \(p_t\)，可能由不同的粒子级动力学实现。</b><p>“分布怎样随时间变化”与“每个粒子具体怎样走”不是完全相同的问题。</p></div>
+</section>
+
+<section id="65"><h2>65 · 它们真正的相同点与不同点</h2>
+
+<h3>65.1 相同点一：都在利用简单分布</h3>
+<p>标准高斯反复出现，因为它：</p>
+<p>• 容易采样；<br>• 数学性质好；<br>• 高维情况下仍易操作；<br>• 可以作为 latent prior 或动态过程的端点。</p>
+
+<h3>65.2 相同点二：都把高维分布问题变成局部可训练问题</h3>
+<p>VAE 把它变成：</p>
+\[
+q(z|x),\quad p(x|z)
+\]
+<p>Diffusion 把它变成每个噪声时刻的去噪。</p>
+<p>Score 把它变成每一点的 log-density gradient。</p>
+<p>Flow Matching 把它变成每一点的 velocity。</p>
+
+<h3>65.3 相同点三：条件期望悄悄贯穿很多模型</h3>
+<p>Diffusion 的 denoising target、score matching、CFM 的条件 velocity 回归背后，都存在“平方误差最优解是条件期望”的结构。</p>
+<p>这个事实非常值得记住：</p>
+\[
+\arg\min_f
+\mathbb E[
+\|Y-f(X)\|^2
+]
+=
+\mathbb E[Y|X]
+\]
+<p>它解释了为什么我们可以拿一个随机、带条件的 target 训练网络，最后得到一个边缘意义上的确定函数。</p>
+
+<h3>65.4 不同点一：VAE 有显式 inference network</h3>
+<p>VAE 明确学习：</p>
+\[
+q_\phi(z|x)
+\]
+<p>来解决潜变量后验推断。</p>
+<p>标准 Diffusion / Flow Matching 通常没有同样意义上的 Encoder posterior。</p>
+
+<h3>65.5 不同点二：Diffusion 的路径通常来自噪声过程</h3>
+<p>经典 Diffusion 先规定一个数据到噪声的 corruption process。</p>
+<p>Flow Matching 可以选择更一般的概率路径，不要求一定来自“逐渐加噪再逆转”的故事。</p>
+
+<h3>65.6 不同点三：Score 是密度几何量，Velocity 是运输动力学量</h3>
+\[
+s_t(x)=\nabla_x\log p_t(x)
+\]
+<p>描述密度形状。</p>
+\[
+v_t(x)
+\]
+<p>描述概率质量运动。</p>
+<p>在特定 SDE / probability flow ODE 下：</p>
+\[
+v_t
+=
+f
+-
+\frac12g^2s_t
+\]
+<p>才建立明确联系。</p>
+
+<h3>65.7 不同点四：路径选择会影响学习与采样难度</h3>
+<p>即使起点和终点相同，中间走一条弯曲复杂路径还是一条较直接路径，会影响：</p>
+<p>• 向量场复杂度；<br>
+• ODE solver 需要多少步；<br>
+• 数值误差；<br>
+• 网络拟合难度。</p>
+<p>这正是 Flow Matching 中概率路径与 coupling 设计如此重要的原因。</p>
+</section>
+
+<section id="66"><h2>66 · 从零看一遍完整知识树：你到底一路学了什么？</h2>
+
+<h3>66.1 数学语言</h3>
+<div class="flow">函数 → 概率 → 条件概率 → 随机变量 → 分布 → 期望 → 方差</div>
+
+<h3>66.2 概率模型</h3>
+<div class="flow">高斯 → log → likelihood → maximum likelihood → NLL</div>
+
+<h3>66.3 信息与推断</h3>
+<div class="flow">信息量 → 熵 → 交叉熵 → KL → Bayes → posterior → latent variable</div>
+
+<h3>66.4 变分推断</h3>
+<div class="flow">难解 posterior → q(z|x) → Jensen → ELBO → amortized inference</div>
+
+<h3>66.5 VAE</h3>
+<div class="flow">Gaussian posterior → reparameterization → Decoder likelihood → reconstruction + KL</div>
+
+<h3>66.6 Diffusion</h3>
+<div class="flow">Markov noising → Gaussian closed form → reverse process → ε prediction → score</div>
+
+<h3>66.7 Flow Matching</h3>
+<div class="flow">ODE → vector field → probability path → continuity equation → conditional velocity regression</div>
+
+<h3>66.8 最终统一</h3>
+<div class="flow">复杂数据分布的学习 = 设计一个可训练的中间结构，让简单分布能够到达数据分布</div>
+</section>
+
+<section id="67"><h2>67 · 学完这套主线后，下一步应该学什么？</h2>
+
+<h3>67.1 如果想继续深入 VAE</h3>
+<p>可以进入：</p>
+<p>• β-VAE 与 disentanglement<br>
+• IWAE<br>
+• VQ-VAE<br>
+• hierarchical VAE<br>
+• learned priors / normalizing-flow posterior</p>
+
+<h3>67.2 如果想继续深入 Diffusion</h3>
+<p>建议依次学习：</p>
+<p>• DDIM<br>
+• continuous-time SDE formulation<br>
+• classifier guidance / classifier-free guidance<br>
+• x0 / ε / v parameterization<br>
+• latent diffusion<br>
+• distillation 与 few-step generation</p>
+
+<h3>67.3 如果想继续深入 Flow Matching</h3>
+<p>建议学习：</p>
+<p>• Rectified Flow<br>
+• OT-CFM<br>
+• stochastic interpolants<br>
+• Schrödinger Bridge<br>
+• consistency / distillation methods<br>
+• 不同 ODE solver 与 trajectory straightness</p>
+
+<h3>67.4 如果目标是“真正会研究生成模型”</h3>
+<p>接下来不应该只继续搜集模型名，而要补三块数学：</p>
+<div class="concept-grid">
+<div><b>线性代数</b><p>矩阵、特征值、Jacobian、协方差、低维子空间。</p></div>
+<div><b>多元微积分</b><p>梯度、Jacobian、divergence、change of variables。</p></div>
+<div><b>随机过程</b><p>Brownian motion、SDE、Fokker–Planck、Itô calculus。</p></div>
+</div>
+<p>学完这些后，再看现代生成模型论文时，大量公式会从“符号墙”变成可追踪的动力学和概率论。</p>
+</section>
+
+<section id="summary"><h2>Part VIII · 最终总结</h2>
+
+<h3>一句话描述 VAE</h3>
+<p>用变分后验解决潜变量模型的难解推断，并通过 ELBO 联合学习 Encoder 与 Decoder。</p>
+
+<h3>一句话描述 Diffusion</h3>
+<p>人为把数据逐渐变成简单噪声，再学习一个反向过程逐步恢复数据。</p>
+
+<h3>一句话描述 Score-based Model</h3>
+<p>学习每个噪声时刻的 log-density gradient，用它构造反向随机或确定性生成动力学。</p>
+
+<h3>一句话描述 Flow Matching</h3>
+<p>选择一条连接简单分布与数据分布的概率路径，直接回归推动这条路径的速度场。</p>
+
+<h3>最终统一图</h3>
+<div class="flow">Simple Distribution<br>↓<br><b>VAE:</b> Decoder from latent<br><b>Diffusion:</b> reverse denoising transitions<br><b>Score:</b> reverse SDE / probability-flow ODE<br><b>Flow Matching:</b> learned ODE velocity<br>↓<br>Data Distribution</div>
+
+<div class="callout"><b>如果你现在重新回到最初的 VAE 公式</b><p>你已经不仅能解释它，还能把它放进更大的生成模型坐标系里：VAE 解决 latent posterior；Diffusion 把复杂生成拆成噪声时间路径；Score 描述密度几何；Flow Matching 描述概率运输动力学。它们不是孤立的四套知识，而是几种不同的“把简单随机性塑造成复杂数据”的数学方案。</p></div>
+
+<h3>核心参考</h3>
+<p class="small">Kingma & Welling, <a href="https://arxiv.org/abs/1312.6114">Auto-Encoding Variational Bayes</a>.</p>
+<p class="small">Ho, Jain & Abbeel, <a href="https://arxiv.org/abs/2006.11239">Denoising Diffusion Probabilistic Models</a>.</p>
+<p class="small">Song et al., <a href="https://arxiv.org/abs/2011.13456">Score-Based Generative Modeling through Stochastic Differential Equations</a>.</p>
+<p class="small">Lipman et al., <a href="https://arxiv.org/abs/2210.02747">Flow Matching for Generative Modeling</a>.</p>
+<p class="small">Salimans & Ho, <a href="https://arxiv.org/abs/2202.00512">Progressive Distillation for Fast Sampling of Diffusion Models</a> — diffusion v-parameterization / fast sampling context.</p>
+
+<div class="pager"><a href="part7.html">← Part VII Flow Matching</a><a href="index.html">返回课程首页</a></div>
+</section>
+
+<footer>FishTank · Generative Models from First Principles · Part VIII · Course Complete</footer>
+</article></main></body></html>
