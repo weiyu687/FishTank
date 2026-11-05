@@ -9,7 +9,7 @@ import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'docs'
-GROUPS = [('01-python', 'Python', '常用标准库与 NumPy 数组计算'), ('02-langchain', 'LangChain', 'LLM 应用与 Agent 实验'), ('03-machinelearning', '机器学习', 'PyTorch 教程、强化学习与生成模型')]
+GROUPS = [('01-python', 'Python', '常用标准库与 NumPy 数组计算'), ('02-langchain', 'LangChain', 'Deep Agents、工具扩展与记忆实验'), ('03-machinelearning', '机器学习', 'PyTorch 教程、强化学习与生成模型'), ('04-agent-interview', 'Agent 开发面试', '原理、RAG、记忆、工程可靠性与系统设计')]
 
 def write_page(path, title, body):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -19,7 +19,7 @@ def write_page(path, title, body):
 <link rel="stylesheet" href="{base}/assets/library.css">
 <script>window.MathJax={{tex:{{inlineMath:[['$','$'],['\\\\(','\\\\)']]}}}};</script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
-<body><header><a href="{base}/index.html">🐟 FishTank</a><nav><a href="{base}/01-python/index.html">Python</a><a href="{base}/02-langchain/index.html">LangChain</a><a href="{base}/03-machinelearning/index.html">机器学习</a></nav></header>
+<body><header><a href="{base}/index.html">🐟 FishTank</a><nav><a href="{base}/01-python/index.html">Python</a><a href="{base}/02-langchain/index.html">LangChain</a><a href="{base}/03-machinelearning/index.html">机器学习</a><a href="{base}/04-agent-interview/index.html">Agent 面试</a></nav></header>
 <main><h1>{html.escape(title)}</h1>{body}</main><footer>FishTank · 学习、实验与持续积累</footer></body></html>''', encoding='utf-8')
 
 def render(text):
@@ -31,7 +31,7 @@ def main():
     for folder, label, description in GROUPS:
         items = []
         for source in sorted((ROOT / folder).rglob('*')):
-            if not source.is_file() or 'generative-models' in source.parts:
+            if not source.is_file() or 'generative-models' in source.parts or '__pycache__' in source.parts:
                 continue
             relative = source.relative_to(ROOT)
             target = DOCS / relative

@@ -1,0 +1,179 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Deep Agents：架构、默认工具与扩展方式 · FishTank</title>
+<link rel="stylesheet" href="../../assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="../../index.html">🐟 FishTank</a><nav><a href="../../01-python/index.html">Python</a><a href="../../02-langchain/index.html">LangChain</a><a href="../../03-machinelearning/index.html">机器学习</a><a href="../../04-agent-interview/index.html">Agent 面试</a></nav></header>
+<main><h1>Deep Agents：架构、默认工具与扩展方式</h1><p><a href="https://github.com/weiyu687/FishTank/blob/main/02-langchain/deepagents/01-overview.md">查看源文件</a></p><h1 id="deep-agents">Deep Agents：架构、默认工具与扩展方式</h1>
+<p>本文讨论 LangChain 的 <code>deepagents</code> Python SDK，不是泛指所有深度研究 Agent。文档核对日期：2026-11-05。接口变化较快，学习时保存依赖版本，不能把 SDK、CLI 和托管平台的默认配置混为一谈。</p>
+<div class="toc">
+<ul>
+<li><a href="#deep-agents">Deep Agents：架构、默认工具与扩展方式</a><ul>
+<li><a href="#_1">学习路线</a></li>
+<li><a href="#1">1. 三层架构如何区分</a></li>
+<li><a href="#2">2. “默认插件”实际上包括哪些东西</a></li>
+<li><a href="#3">3. 中间件的作用</a><ul>
+<li><a href="#_2">覆盖默认中间件时的陷阱</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 最小应用</a></li>
+<li><a href="#5-backend">5. Backend 如何选</a></li>
+<li><a href="#6-deep-agents">6. 什么时候不需要 Deep Agents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="_1">学习路线</h2>
+<ol>
+<li>阅读本篇，理解 Agent 循环与内置能力。</li>
+<li>阅读<a href="02-memory-lab.html">记忆机制与实验</a>，动手做对照实验。</li>
+<li>阅读<a href="03-engineering.html">Skills、工具与工程化</a>，组织自己的应用。</li>
+<li>使用<a href="../../04-agent-interview/01-foundations.html">面试专栏</a>检查是否能解释设计取舍。</li>
+</ol>
+<h2 id="1">1. 三层架构如何区分</h2>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>承担的职责</th>
+<th>何时直接使用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LangChain</td>
+<td>模型、工具、消息、Agent 循环与中间件</td>
+<td>常规工具调用应用</td>
+</tr>
+<tr>
+<td>LangGraph</td>
+<td>状态图、执行恢复、持久化、中断和流式运行</td>
+<td>流程需要精确控制</td>
+</tr>
+<tr>
+<td>Deep Agents</td>
+<td>在上述能力上组合文件上下文、子任务、记忆和 Skills</td>
+<td>长任务、资料整理、代码与研究类应用</td>
+</tr>
+</tbody>
+</table>
+<p>Deep Agents 不是换了一个更聪明的模型，而是给模型配置工作环境。模型负责提出调用，运行时执行工具并把结果交回模型。最终可靠性仍受模型、工具契约、数据质量、预算和验证机制共同约束。<a href="https://www.langchain.com/oss-overview">官方架构说明</a></p>
+<h2 id="2">2. “默认插件”实际上包括哪些东西</h2>
+<p>在 SDK 中，更准确的术语是工具、middleware、backend 与 skill。工具是模型可请求的动作；middleware 处理调用前后行为；backend 决定文件落在哪里；skill 是按任务加载的流程知识。</p>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>模型可见入口</th>
+<th>启用条件与边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文件导航</td>
+<td>ls、glob、grep</td>
+<td>通过配置的文件后端操作</td>
+</tr>
+<tr>
+<td>读取与修改</td>
+<td>read_file、write_file、edit_file</td>
+<td>读写权限仍需在运行时限制</td>
+</tr>
+<tr>
+<td>删除</td>
+<td>delete</td>
+<td>当前文档标注 deepagents ≥ 0.7，且后端支持</td>
+</tr>
+<tr>
+<td>子任务委派</td>
+<td>task</td>
+<td>子 Agent 的上下文和工具需要单独设计</td>
+</tr>
+<tr>
+<td>命令执行</td>
+<td>execute</td>
+<td>需支持执行的后端；普通内存文件系统不等于 shell</td>
+</tr>
+<tr>
+<td>任务清单</td>
+<td>write_todos</td>
+<td>当前工具文档要求显式加入 TodoListMiddleware</td>
+</tr>
+<tr>
+<td>长期说明加载</td>
+<td>memory 参数</td>
+<td>指定文件及合适的存储后端</td>
+</tr>
+<tr>
+<td>按需流程加载</td>
+<td>skills 参数</td>
+<td>提供含 SKILL.md 的目录</td>
+</tr>
+</tbody>
+</table>
+<p>不要把浏览器、互联网搜索、数据库、邮件或任何 MCP 服务当成默认已经连接的插件。它们需要业务方提供工具和授权。工具名存在也不代表后端拥有相应权限。<a href="https://docs.langchain.com/oss/python/deepagents/tools">官方工具清单</a></p>
+<h2 id="3">3. 中间件的作用</h2>
+<p>FilesystemMiddleware 连接文件工具与后端；SubAgentMiddleware 提供任务委派；MemoryMiddleware 加载指定的记忆文件；SkillsMiddleware 提供流程知识的渐进加载。摘要能力用于控制上下文长度，大型工具输出也可以外置到文件后再按需读取。</p>
+<p>要区分“框架提供这个组件”和“某次构建确实启用了它”。model、参数、profile 和 SDK 版本可能影响最终配置。排错时查看实际工具调用轨迹与安装版本，而不是只看博客中的截图。<a href="https://reference.langchain.com/python/deepagents/middleware">中间件参考</a></p>
+<h3 id="_2">覆盖默认中间件时的陷阱</h3>
+<p>当前文档允许用同名中间件实例替换默认实例。替换不是参数合并：自定义 FilesystemMiddleware 需要自己带好 backend 等配置。不要认为 create_deep_agent 外层传入的每个参数都会自动传给替换实例。摘要阈值也需要根据任务长度和模型窗口设计。<a href="https://docs.langchain.com/oss/python/deepagents/customization">自定义指南</a></p>
+<h2 id="4">4. 最小应用</h2>
+<p>使用独立 Python 3.11+ 环境，并核对所选包版本的 Requires-Python。安装 <code>deepagents</code> 和模型供应商集成包，例如 <code>langchain-openai</code>。模型名称由环境变量传入，避免教程绑定某个付费模型。</p>
+<pre><code class="language-python">import os
+from deepagents import create_deep_agent
+
+def lookup_policy(topic: str) -&gt; str:
+    &quot;&quot;&quot;查询演示知识库的指定主题；未知主题明确返回未找到。&quot;&quot;&quot;
+    policies = {&quot;refund&quot;: &quot;演示规则：未发货订单可申请取消。&quot;}
+    return policies.get(topic, &quot;未找到对应规则，请补充主题。&quot;)
+
+agent = create_deep_agent(
+    model=os.environ[&quot;DEEPAGENT_MODEL&quot;],
+    tools=[lookup_policy],
+    system_prompt=&quot;你是演示知识助手。规则问题必须调用工具；信息不足时明确说明。&quot;,
+)
+result = agent.invoke({&quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;refund 有什么规则？&quot;}]})
+print(result[&quot;messages&quot;][-1].content)
+</code></pre>
+<p>环境变量可设为供应商支持的 <code>provider:model</code> 标识，同时在本地设置相应密钥。不要把密钥写入代码或提交到 Git。这个例子只查询本地字典，调用语言模型仍可能产生费用。</p>
+<p>观察重点：模型是否选择正确工具、参数是否正确、未找到时是否编造、最终回答是否忠于工具结果。一次成功只能证明路径跑通，不能证明整个应用可靠。</p>
+<h2 id="5-backend">5. Backend 如何选</h2>
+<table>
+<thead>
+<tr>
+<th>后端</th>
+<th>典型用途</th>
+<th>必须验证的边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>StateBackend</td>
+<td>线程内草稿与临时文件</td>
+<td>跨调用依赖状态保存；不天然跨线程共享</td>
+</tr>
+<tr>
+<td>FilesystemBackend</td>
+<td>本地实验、挂载卷文件</td>
+<td>持久卷生命周期、路径和租户隔离</td>
+</tr>
+<tr>
+<td>StoreBackend</td>
+<td>跨线程共享的数据</td>
+<td>底层 store 是否真持久化、namespace 是否隔离</td>
+</tr>
+<tr>
+<td>CompositeBackend</td>
+<td>临时区与记忆区分离</td>
+<td>路由前缀是否指向预期存储</td>
+</tr>
+<tr>
+<td>Sandbox 后端</td>
+<td>运行代码和命令</td>
+<td>网络、资源、文件、凭证边界</td>
+</tr>
+</tbody>
+</table>
+<p>backend 是存储或执行实现，不是记忆算法。把文件写到持久目录不会自动完成事实去重、冲突消解和过期管理。LocalShellBackend 直接在宿主机执行；不能因为路径设置了根目录就认为 shell 被安全隔离。<a href="https://docs.langchain.com/oss/python/deepagents/backends">后端指南</a></p>
+<h2 id="6-deep-agents">6. 什么时候不需要 Deep Agents</h2>
+<p>字段提取、固定 SQL 查询或三步审批流程，通常直接使用结构化输出或固定工作流更容易验证。只有任务确实需要动态拆解、反复检索和上下文整理时，再引入完整 Agent 能力。评估时对比同一任务集的成功率、总成本、尾延迟和人工接管率。</p></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>

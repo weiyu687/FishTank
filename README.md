@@ -7,9 +7,11 @@
 ## 目录
 
 - [Python](01-python/)：版本管理、os、pathlib、[常用模块](01-python/common-modules/Note.md)与 [NumPy](01-python/numpy/Note.md)。
-- [LangChain](02-langchain/)：Agent 实验与示例。
+- [LangChain](02-langchain/)：Agent 实验与示例、[Deep Agents 专题](02-langchain/deepagents/01-overview.md)与[记忆实验](02-langchain/deepagents/02-memory-lab.md)。
 - [机器学习](03-machinelearning/)：[PyTorch 入门与完整训练](03-machinelearning/pytorch/Note.md)、强化学习六阶段笔记与实验。
   - [生成模型数学基础](03-machinelearning/generative-models/)：八章课程，保留原内容。
+
+- [Agent 应用开发面试](04-agent-interview/01-foundations.md)：基础原理、RAG 与记忆、可靠性、系统设计和项目追问。
 
 ## 更新与发布
 

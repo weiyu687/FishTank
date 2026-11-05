@@ -1,0 +1,87 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Deep Agents：Skills、子任务与工程实践 · FishTank</title>
+<link rel="stylesheet" href="../../assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="../../index.html">🐟 FishTank</a><nav><a href="../../01-python/index.html">Python</a><a href="../../02-langchain/index.html">LangChain</a><a href="../../03-machinelearning/index.html">机器学习</a><a href="../../04-agent-interview/index.html">Agent 面试</a></nav></header>
+<main><h1>Deep Agents：Skills、子任务与工程实践</h1><p><a href="https://github.com/weiyu687/FishTank/blob/main/02-langchain/deepagents/03-engineering.md">查看源文件</a></p><h1 id="deep-agentsskills">Deep Agents：Skills、子任务与工程实践</h1>
+<div class="toc">
+<ul>
+<li><a href="#deep-agentsskills">Deep Agents：Skills、子任务与工程实践</a><ul>
+<li><a href="#1-skill">1. Skill 与工具的分工</a></li>
+<li><a href="#2">2. 自定义工具的接口设计</a></li>
+<li><a href="#3-agent">3. 何时拆分子 Agent</a></li>
+<li><a href="#4">4. 上下文预算</a></li>
+<li><a href="#5">5. 人工介入与恢复</a></li>
+<li><a href="#6">6. 从演示到上线的检查点</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="1-skill">1. Skill 与工具的分工</h2>
+<p>工具解决“可以做什么”，例如查询订单；Skill 解决“这类任务应该怎么做”，例如先查询状态，再判断规则，最后生成说明。Skill 不能替代权限校验，也不会凭空增加一个可调用 API。</p>
+<p>典型目录如下，SKILL.md 含名称、描述和操作流程。描述要说明触发场景，正文给出输入、步骤、输出和校验方式。不要把所有业务知识塞进一个大文件。</p>
+<pre><code class="language-text">skills/
+  review-memory/
+    SKILL.md
+    references/
+      evaluation.md
+</code></pre>
+<pre><code class="language-markdown">---
+name: review-memory
+description: 审核实验记忆的来源、重复、冲突和过期条目。
+---
+读取指定记忆文件，按来源、有效期、冲突和重复四项检查。
+先输出拟修改列表，不把未知事实补成确定事实。
+输出包含原条目、问题、建议与证据位置。
+</code></pre>
+<p>通过 <code>skills=["/skills/"]</code> 配置后端里的目录。路径属于 backend 的命名空间，不一定等于操作系统路径。初始加载元数据、需要时读取正文能减少上下文占用，但不能保证模型每次都会选中正确 Skill；应设计命中率测试。<a href="https://docs.langchain.com/oss/python/deepagents/skills">官方 Skills 指南</a></p>
+<h2 id="2">2. 自定义工具的接口设计</h2>
+<p>工具名称描述业务动作，参数尽量小而明确。查询结果返回稳定结构：status、data、error_code、retryable、source。把鉴权、租户范围与服务端凭证放在运行时上下文，不能让模型自由选择授权身份。</p>
+<p>查询订单和取消订单拆成不同工具。取消工具要求业务层确认条件、幂等键和审计信息。工具说明解释何时使用；执行代码落实限制。失败时返回可操作原因，例如参数错误不要靠无限重试解决。</p>
+<h2 id="3-agent">3. 何时拆分子 Agent</h2>
+<p>适合：几个互不依赖的数据源调查、不同文档的独立分析、明确边界的检查任务。不适合：每一步都依赖上一结果，或者多个 Agent 需要同时修改同一文件。</p>
+<p>委派输入包括目标、允许工具、必要资料、输出 schema、预算和验收标准。返回结果包括结论、证据、未解决项。主 Agent 负责综合并检查冲突；“子 Agent 说完成”不能替代验证。</p>
+<p>子任务隔离能减少上下文污染，但也可能遗漏关键背景。共享全部历史则增加 token 和敏感信息暴露。用最小必要上下文开始，再根据实际失败案例调整。</p>
+<h2 id="4">4. 上下文预算</h2>
+<p>为系统规则、当前任务、近期消息、证据、工具描述和输出预留空间。长工具结果先落盘，随后定位需要的段落。摘要保留任务目标、已做操作、关键证据路径、未解决项和约束，不只保留聊天梗概。</p>
+<p>摘要会丢信息，不能把它当作无损压缩。对金额、编号、时间与权限决策，保存结构化原始数据并按需回查。评估“压缩前正确、压缩后错误”的任务比例。</p>
+<h2 id="5">5. 人工介入与恢复</h2>
+<p>需要人工审核的动作可配置 interrupt_on，结合 checkpointer 保存暂停状态。审批界面展示具体工具、参数、影响和业务依据。恢复时继续原线程，并重新校验当前资源版本，避免审批期间状态变化。</p>
+<p>工具已成功、响应却丢失时，恢复可能触发重试。写操作必须使用业务幂等键及结果查询，不能假设图恢复会自动保证外部系统只执行一次。<a href="https://docs.langchain.com/oss/python/langchain/human-in-the-loop">人工介入文档</a></p>
+<h2 id="6">6. 从演示到上线的检查点</h2>
+<table>
+<thead>
+<tr>
+<th>层面</th>
+<th>应拿出的证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>任务效果</td>
+<td>固定测试集、失败分类、基线对比</td>
+</tr>
+<tr>
+<td>记忆</td>
+<td>跨线程、重启、用户隔离、更新和删除实验</td>
+</tr>
+<tr>
+<td>工具</td>
+<td>参数校验、超时、重试、幂等、权限测试</td>
+</tr>
+<tr>
+<td>资源</td>
+<td>最大步数、token、工具次数、运行时长和并发限制</td>
+</tr>
+<tr>
+<td>可观测性</td>
+<td>模型调用、工具结果、路由、摘要、记忆读写 trace</td>
+</tr>
+<tr>
+<td>发布</td>
+<td>依赖锁定、灰度、版本标记、回滚与人工接管</td>
+</tr>
+</tbody>
+</table>
+<p>记录工具调用与结构化决策证据即可，不应要求或依赖模型输出隐藏思维链。日志也应避免保存凭证和无必要的个人信息。</p></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>
