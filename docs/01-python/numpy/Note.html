@@ -1,0 +1,110 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>NumPy：数组计算入门 · FishTank</title>
+<link rel="stylesheet" href="../../assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="../../index.html">🐟 FishTank</a><nav><a href="../../01-python/index.html">Python</a><a href="../../02-langchain/index.html">LangChain</a><a href="../../03-machinelearning/index.html">机器学习</a></nav></header>
+<main><h1>NumPy：数组计算入门</h1><p><a href="https://github.com/weiyu687/FishTank/blob/main/01-python/numpy/Note.md">查看源文件</a></p><h1 id="numpy">NumPy：数组计算入门</h1>
+<p>安装：<code>python -m pip install numpy</code>。以下代码按顺序执行。路线：形状 → 索引 → 广播 → 矩阵运算 → 数据预处理。</p>
+<div class="toc">
+<ul>
+<li><a href="#numpy">NumPy：数组计算入门</a><ul>
+<li><a href="#_1">数组、形状与类型</a></li>
+<li><a href="#_2">索引、视图与副本</a></li>
+<li><a href="#_3">广播与聚合</a></li>
+<li><a href="#_4">元素乘法与矩阵乘法</a></li>
+<li><a href="#_5">实践：拆分数据并标准化</a></li>
+<li><a href="#_6">保存与读取</a></li>
+<li><a href="#_7">排错与练习</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="_1">数组、形状与类型</h2>
+<pre><code class="language-python">import numpy as np
+x = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+assert x.shape == (2, 3)
+assert x.ndim == 2
+print(x.dtype, np.zeros((2, 3)), np.arange(6).reshape(2, 3))
+print(np.linspace(0, 1, 5))
+</code></pre>
+<p>shape 记录各轴长度，ndim 是轴数，dtype 是元素类型。二维机器学习数据常按 <code>(样本数, 特征数)</code> 排列。reshape 保持元素总数不变，可用一个 -1 自动推导长度。</p>
+<h2 id="_2">索引、视图与副本</h2>
+<pre><code class="language-python">assert x[1, 2] == 6
+assert x[:, 1].shape == (2,)
+assert x[:, 1:2].shape == (2, 1)
+assert np.array_equal(x[x &gt; 3], [4, 5, 6])
+view = x[:, :2]
+assert np.shares_memory(x, view)
+independent = view.copy()
+independent[0, 0] = 99
+assert x[0, 0] == 1
+</code></pre>
+<p>基本切片通常共享原数组内存；布尔索引与整数数组索引返回副本。注意 <code>(N,)</code> 与 <code>(N, 1)</code> 在广播中行为不同。</p>
+<h2 id="_3">广播与聚合</h2>
+<pre><code class="language-python">bias = np.array([10, 20, 30], dtype=np.float32)
+assert (x + bias).shape == (2, 3)
+centered = x - x.mean(axis=1, keepdims=True)
+assert np.allclose(centered.mean(axis=1), 0)
+</code></pre>
+<p>广播从右向左比较维度，长度相同或其中一个为 1 才兼容。axis=0 消去行轴，得到每列统计；axis=1 消去列轴，得到每行统计。keepdims 保留长度为 1 的轴，方便广播。</p>
+<h2 id="_4">元素乘法与矩阵乘法</h2>
+<pre><code class="language-python">assert (x * x).shape == (2, 3)
+assert np.array_equal(x @ np.ones((3, 1)), [[6], [15]])
+a = np.array([[2., 0.], [0., 4.]])
+b = np.array([6., 8.])
+solution = np.linalg.solve(a, b)
+assert np.allclose(a @ solution, b)
+</code></pre>
+<p>星号逐元素相乘，@ 执行矩阵乘法。求解非奇异方阵线性系统使用 solve；最小二乘问题可使用 lstsq。</p>
+<h2 id="_5">实践：拆分数据并标准化</h2>
+<pre><code class="language-python">rng = np.random.default_rng(42)
+samples = rng.normal(size=(100, 3))
+order = rng.permutation(len(samples))
+train, test = samples[order[:80]], samples[order[80:]]
+mean = train.mean(axis=0, keepdims=True)
+std = train.std(axis=0, keepdims=True)
+scale = np.where(std &gt; 1e-8, std, 1.0)
+train_scaled = (train - mean) / scale
+test_scaled = (test - mean) / scale
+assert np.allclose(train_scaled.mean(axis=0), 0, atol=1e-7)
+assert np.isfinite(test_scaled).all()
+</code></pre>
+<p>只用训练集计算均值和标准差，测试集复用这些参数，避免信息泄漏。常数列需要防止除零；真实数据还应处理缺失值。固定种子帮助复现，同时应记录 NumPy 版本。</p>
+<h2 id="_6">保存与读取</h2>
+<pre><code class="language-python">from tempfile import TemporaryDirectory
+from pathlib import Path
+with TemporaryDirectory() as directory:
+    path = Path(directory) / &quot;features.npy&quot;
+    np.save(path, train_scaled)
+    assert np.allclose(np.load(path, allow_pickle=False), train_scaled)
+</code></pre>
+<h2 id="_7">排错与练习</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>检查点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>广播错误</td>
+<td>打印双方 shape，从右向左比较</td>
+</tr>
+<tr>
+<td>修改切片影响原数组</td>
+<td>是否需要 copy</td>
+</tr>
+<tr>
+<td>原地运算类型错误</td>
+<td>整数数组是否接收浮点结果</td>
+</tr>
+<tr>
+<td>内存过大</td>
+<td>广播是否创建巨大中间数组</td>
+</tr>
+</tbody>
+</table>
+<p>练习：筛选第一列为正的行；计算每列最大值；为标准化增加常数列测试。</p>
+<p>参考：<a href="https://numpy.org/doc/stable/user/quickstart.html">NumPy 快速入门</a>、<a href="https://numpy.org/doc/stable/user/basics.broadcasting.html">广播</a>。下一步：<a href="../../03-machinelearning/pytorch/Note.html">PyTorch</a>。</p></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>

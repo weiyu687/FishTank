@@ -9,7 +9,7 @@ import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'docs'
-GROUPS = [('01-python', 'Python', '语言基础与常用标准库'), ('02-langchain', 'LangChain', 'LLM 应用与 Agent 实验'), ('03-machinelearning', '机器学习', '强化学习与生成模型')]
+GROUPS = [('01-python', 'Python', '常用标准库与 NumPy 数组计算'), ('02-langchain', 'LangChain', 'LLM 应用与 Agent 实验'), ('03-machinelearning', '机器学习', 'PyTorch 教程、强化学习与生成模型')]
 
 def write_page(path, title, body):
     path.parent.mkdir(parents=True, exist_ok=True)

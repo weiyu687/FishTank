@@ -6,9 +6,9 @@
 
 ## 目录
 
-- [Python](01-python/)：版本管理、os 与 pathlib。
+- [Python](01-python/)：版本管理、os、pathlib、[常用模块](01-python/common-modules/Note.md)与 [NumPy](01-python/numpy/Note.md)。
 - [LangChain](02-langchain/)：Agent 实验与示例。
-- [机器学习](03-machinelearning/)：强化学习六阶段笔记与实验。
+- [机器学习](03-machinelearning/)：[PyTorch 入门与完整训练](03-machinelearning/pytorch/Note.md)、强化学习六阶段笔记与实验。
   - [生成模型数学基础](03-machinelearning/generative-models/)：八章课程，保留原内容。
 
 ## 更新与发布
