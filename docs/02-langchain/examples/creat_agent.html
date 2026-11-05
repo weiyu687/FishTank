@@ -1,0 +1,194 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>examples / creat_agent.ipynb · FishTank</title>
+<link rel="stylesheet" href="../../assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="../../index.html">🐟 FishTank</a><nav><a href="../../01-python/index.html">Python</a><a href="../../02-langchain/index.html">LangChain</a><a href="../../03-machinelearning/index.html">机器学习</a></nav></header>
+<main><h1>examples / creat_agent.ipynb</h1><p><a href="https://github.com/weiyu687/FishTank/blob/main/02-langchain/examples/creat_agent.ipynb">查看源文件</a></p><p class="intro">实验笔记 · 代码仅展示，浏览页面不会执行。</p>
+<h3 id="_1">创建智能体</h3>
+<ol>
+<li>安装依赖(包括LangChain、LangGraph、DeepAgents)</li>
+<li>初始化LLM</li>
+<li>初始化工具列表</li>
+<li>初始化智能体</li>
+<li>测试智能体</li>
+</ol>
+<ol>
+<li>安装依赖</li>
+</ol>
+<pre><code>pip install -U langchain langgraph deepagents
+</code></pre>
+<p>目前langchain和langgraph要求python版本号<strong>3.10及3.10+</strong>,
+deepagents要求python版本号<strong>3.10+</strong>,
+所以推荐在python=3.11环境下进行相关内容的学习</p>
+<pre><code>%pip install -U langchain langchain_openai langgraph deepagents</code></pre>
+<ol>
+<li>初始化LLM</li>
+</ol>
+<p>通常在本地环境或.env配置LLM相关参数</p>
+<ul>
+<li>在本地环境进行配置</li>
+</ul>
+<p><strong>Windows</strong>环境下：</p>
+<pre><code class="language-bash"># 临时(当前终端窗口生效)
+set MODEL_NAME=deepseek-flash
+set MODEL_API_KEY=sk-...
+set MODEL_API_URL=https://api.deepseek.com/v1
+
+# 永久(powershell，写入用户环境变量，重启终端生效)
+[Environment]::SetEnvironmentVariable(&quot;MODEL_NAME&quot;, &quot;deepseek-flash&quot;, &quot;User&quot;)
+[Environment]::SetEnvironmentVariable(&quot;MODEL_API_KEY&quot;, &quot;sk-...&quot;, &quot;User&quot;)
+[Environment]::SetEnvironmentVariable(&quot;MODEL_API_URL&quot;, &quot;https://api.deepseek.com/v1&quot;, &quot;User&quot;)
+</code></pre>
+<p><strong>Linux</strong>环境下：</p>
+<pre><code class="language-bash"># 临时
+export MODEL_NAME=&quot;deepseek-flash&quot;
+export MODEL_API_KEY=&quot;sk-...&quot;
+export MODEL_API_URL=&quot;https://api.deepseek.com/v1&quot;
+
+# 永久
+echo 'export MODEL_NAME=&quot;deepseek-flash&quot;' &gt;&gt; ~/.bashrc
+echo 'export MODEL_API_KEY=&quot;sk-...&quot;' &gt;&gt; ~/.bashrc
+echo 'export MODEL_API_URL=&quot;https://api.deepseek.com/v1&quot;' &gt;&gt; ~/.bashrc
+source ~/.bashrc
+</code></pre>
+<ul>
+<li>使用.env文件进行配置</li>
+</ul>
+<pre><code class="language-text"># 示例
+MODEL_NAME=&quot;deepseek-flash&quot;
+MODEL_API_KEY=sk-...
+MODEL_API_URL=https://api.deepseek.com/v1
+</code></pre>
+<p><strong>读取环境变量</strong></p>
+<pre><code class="language-python">import os
+# %pip install python_dotenv
+from dotenv import load_dotenv
+
+load_dotenv()
+
+model_name = os.getenv(&quot;MODEL_NAME&quot;)
+api_key = os.getenv(&quot;MODEL_API_KEY&quot;)
+api_url = os.getenv(&quot;MODEL_API_URL&quot;)
+</code></pre>
+<pre><code># 在Windows环境下临时配置LLM相关参数
+# %env是jupyter原生魔法，Winodws终端环境下应该使用set
+%env MODEL_NAME=deepseek-flash
+# 需要替换为真实API Key
+%env MODEL_API_KEY=sk-...
+%env MODEL_API_URL=https://api.deepseek.com/v1</code></pre>
+<pre><code>%pip install dotenv</code></pre>
+<pre><code>import os
+from dotenv import load_dotenv
+from langchain.chat_models import init_chat_model
+
+load_dotenv()
+
+model_name = os.getenv(&quot;MODEL_NAME&quot;)
+model_api_key = os.getenv(&quot;MODEL_API_KEY&quot;)
+model_api_url = os.getenv(&quot;MODEL_API_URL&quot;)
+
+# 其他参数可以从https://reference.langchain.com/python/langchain/chat_models/base/init_chat_model查阅
+chat_model = init_chat_model(
+    model=model_name,
+    model_provider=&quot;openai&quot;, # deepseek兼容openai协议
+    api_key=model_api_key,
+    base_url=model_api_url,
+    temperature=0.1 #随机性，越接近1随机性越强
+)
+
+# 测试
+# chat_model 输入消息列表
+ai_reply = chat_model.invoke([
+        {
+            &quot;role&quot;:&quot;user&quot;,
+            &quot;content&quot;:&quot;你好&quot;
+        }
+    ])
+
+print(ai_reply)
+print(ai_reply.content)</code></pre>
+<pre class="output">content=&#x27;你好！有什么我可以帮你的吗？&#x27; additional_kwargs={&#x27;refusal&#x27;: None} response_metadata={&#x27;token_usage&#x27;: {&#x27;completion_tokens&#x27;: 46, &#x27;prompt_tokens&#x27;: 31, &#x27;total_tokens&#x27;: 77, &#x27;completion_tokens_details&#x27;: {&#x27;accepted_prediction_tokens&#x27;: None, &#x27;audio_tokens&#x27;: None, &#x27;reasoning_tokens&#x27;: 37, &#x27;rejected_prediction_tokens&#x27;: None, &#x27;text_tokens&#x27;: None}, &#x27;prompt_tokens_details&#x27;: {&#x27;audio_tokens&#x27;: None, &#x27;cache_write_tokens&#x27;: None, &#x27;cached_tokens&#x27;: 0, &#x27;image_tokens&#x27;: None, &#x27;text_tokens&#x27;: None}, &#x27;prompt_cache_hit_tokens&#x27;: 0, &#x27;prompt_cache_miss_tokens&#x27;: 31}, &#x27;model_provider&#x27;: &#x27;openai&#x27;, &#x27;model_name&#x27;: &#x27;deepseek-flash&#x27;, &#x27;system_fingerprint&#x27;: &#x27;aeb56401ca74e127821c4f9126dcb669&#x27;, &#x27;id&#x27;: &#x27;d0d32de9-b913-4308-91b0-c9973df33cc5&#x27;, &#x27;finish_reason&#x27;: &#x27;stop&#x27;, &#x27;logprobs&#x27;: None} id=&#x27;lc_run--01a13337-e82a-7701-8a14-dc95428a1e4e-0&#x27; tool_calls=[] invalid_tool_calls=[] usage_metadata={&#x27;input_tokens&#x27;: 31, &#x27;output_tokens&#x27;: 46, &#x27;total_tokens&#x27;: 77, &#x27;input_token_details&#x27;: {&#x27;cache_read&#x27;: 0}, &#x27;output_token_details&#x27;: {&#x27;reasoning&#x27;: 37}}
+你好！有什么我可以帮你的吗？
+</pre>
+<ol>
+<li>初始化工具列表</li>
+</ol>
+<p>工具重要参数：</p>
+<ul>
+<li>name</li>
+<li>description</li>
+<li>args_schema</li>
+</ul>
+<p><strong>@tool</strong>作用：</p>
+<ol>
+<li>生成tool description</li>
+</ol>
+<p>将函数的文档字符串""" """变为工具描述。数据类型是string。</p>
+<ol>
+<li>生成tool args_schema</li>
+</ol>
+<p>读取函数的type hint,生成符合OpenAI function calling的参数结构。</p>
+<ol>
+<li>将普通函数变为Base Tool对象</li>
+</ol>
+<p>包装后函数拥有.name、.description、.args_schema属性，传给bind_tools或者create_agent。</p>
+<ol>
+<li>适配LangGraph的ToolNode</li>
+</ol>
+<p>LangGraph中的ToolNode会自动识别@tool装饰的工具，
+自动执行、把结果包装成ToolMessage,
+不需要处理消息转换</p>
+<pre><code>from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage
+
+@tool
+def get_weather(city: str) -&gt; str:
+    &quot;&quot;&quot;返回该城市的天气情况
+    
+    Args:
+        city: 城市名
+
+    Returns:
+        str: 该城市的天气情况，例如&quot;晴天&quot;
+    &quot;&quot;&quot;
+    return f&quot;{city}当前天气：晴天&quot;
+
+chat_model_with_tools = chat_model.bind_tools([get_weather])
+
+res = chat_model_with_tools.invoke([HumanMessage(content=&quot;贵阳天气怎么样？&quot;)])
+
+print(&quot;res.tool_calls:&quot;, res.tool_calls)</code></pre>
+<pre class="output">res.tool_calls: [{&#x27;name&#x27;: &#x27;get_weather&#x27;, &#x27;args&#x27;: {&#x27;city&#x27;: &#x27;贵阳&#x27;}, &#x27;id&#x27;: &#x27;call_00_a29QQS5WGWYb2oCUi2HJ9437&#x27;, &#x27;type&#x27;: &#x27;tool_call&#x27;}]
+</pre>
+<p><strong>chat_model</strong>通过
+<em>bind_tools</em>绑定tool list后，当识别到存在工具调用的需求，会返回tool_calls表示需要调用工具，chat_model没有工具调用的能力，因为其只是LLM，不是Agent</p>
+<ol>
+<li>初始化智能体</li>
+</ol>
+<p>不同于
+<strong>chat_model</strong>,
+<strong>agent</strong>拥有了工具调用的能力,遵守ReAct模式,
+即reasoning-&gt;action-&gt;observation的不断循环，
+具体可查阅论文<a href="https://arxiv.org/abs/2210.03629">ReAct: Synergizing Reasoning and Acting in Language Models</a></p>
+<pre><code>from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
+
+agent = create_agent(
+    model=chat_model,
+    tools=[get_weather],
+    system_prompt=&quot;You are a helpful assistant&quot;
+)</code></pre>
+<pre><code># 5. 测试智能体
+
+res = agent.invoke(
+    {
+        &quot;messages&quot;:[
+            HumanMessage(content=&quot;贵阳天气怎么样？&quot;)
+        ]
+    }
+)
+
+print(res[&quot;messages&quot;][-1].content_blocks)</code></pre>
+<pre class="output">[{&#x27;type&#x27;: &#x27;text&#x27;, &#x27;text&#x27;: &#x27;贵阳当前天气是**晴天** ☀️，适合出门活动。需要我帮你查一下其他城市或者未来几天的天气吗？&#x27;}]
+</pre></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>

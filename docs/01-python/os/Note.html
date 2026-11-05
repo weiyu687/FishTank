@@ -1,0 +1,43 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>os · FishTank</title>
+<link rel="stylesheet" href="../../assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="../../index.html">🐟 FishTank</a><nav><a href="../../01-python/index.html">Python</a><a href="../../02-langchain/index.html">LangChain</a><a href="../../03-machinelearning/index.html">机器学习</a></nav></header>
+<main><h1>os</h1><p><a href="https://github.com/weiyu687/FishTank/blob/main/01-python/os/Note.md">查看源文件</a></p><h2 id="os">os</h2>
+<p>提供与操作系统相关的功能</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">functions \ attribute</th>
+<th style="text-align: center;">link</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">os.getenv()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/os.html#os.getenv">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">os.environ</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/os.html#os.environ">doc</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="osgetenv">os.getenv()</h3>
+<p>获取环境变量</p>
+<pre><code class="language-python">api_key = os.getenv(&quot;MODEL_API_KEY&quot;)
+</code></pre>
+<h3 id="osenviron">os.environ</h3>
+<p>环境变量字典，可以读、临时写环境变量</p>
+<pre><code class="language-python">os.environ[&quot;MODEL_API_KEY&quot;] = &quot;sk-...&quot;
+</code></pre>
+<blockquote>
+<p>os.getenv("key")与os.environ["key"]相比,
+更推荐使用os.getenv("key")，
+因为os.getenv("key")若key不存在返回None,
+而os.environ["key"]若key不存在会抛出KeyError，适合强制校验</p>
+</blockquote>
+<p>由于<strong>Python3.4+</strong>推荐<strong>pathlib</strong>,
+所以关于os.path的相关内容不再记录,
+相关操作详见pathlib</p></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>

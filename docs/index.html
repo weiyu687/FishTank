@@ -1,69 +1,7 @@
-<!doctype html><html lang="zh-CN"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FishTank · 个人知识树</title><link rel="stylesheet" href="assets/style.css">
-</head><body class="home-body">
-<main class="home-main"><article class="hub-article">
-<header class="hero hub-hero">
-<p class="eyebrow">FISHTANK · PERSONAL KNOWLEDGE TREE</p>
-<h1>我的知识树</h1>
-<p class="lead">这里不是一门课程，而是整个 FishTank 知识库的入口。每一个知识体系都作为独立分支生长：有自己的首页、学习路径、章节与扩展专题，同时共享同一个 GitHub Pages 域名。</p>
-<div class="hero-actions">
-<a class="button primary" href="#tree">浏览知识树</a>
-<a class="button" href="https://github.com/weiyu687/FishTank">查看 GitHub 仓库</a>
-</div>
-</header>
-
-<section id="tree"><h2>知识树</h2>
-<p>后续新增任何知识体系，只需要在 <code>docs/</code> 下增加一个独立目录，并在这里增加一个入口；不需要再创建新的 GitHub Pages 项目。</p>
-
-<div class="knowledge-tree">
-<div class="knowledge-branch">
-<div class="branch-label">基础与编程</div>
-<div class="knowledge-grid">
-<a class="knowledge-card external" href="https://github.com/weiyu687/FishTank/tree/main/01-python">
-<span class="status muted">仓库笔记</span><h3>Python</h3><p>Python 语言与工程基础。当前内容保留在仓库笔记中，未来可以独立网站化。</p>
-</a>
-</div></div>
-
-<div class="knowledge-branch">
-<div class="branch-label">LLM / Agent</div>
-<div class="knowledge-grid">
-<a class="knowledge-card external" href="https://github.com/weiyu687/FishTank/tree/main/02-langchain">
-<span class="status muted">仓库笔记</span><h3>LangChain</h3><p>LLM 应用与 Agent 工具链相关知识。后续可扩展为独立学习路径。</p>
-</a>
-</div></div>
-
-<div class="knowledge-branch">
-<div class="branch-label">Machine Learning</div>
-<div class="knowledge-grid">
-<a class="knowledge-card external" href="https://github.com/weiyu687/FishTank/tree/main/03-machinelearning">
-<span class="status muted">仓库笔记</span><h3>Machine Learning</h3><p>机器学习基础知识与实验记录。</p>
-</a>
-
-<a class="knowledge-card featured" href="generative-models/">
-<span class="status ready">完整课程 · 8 Parts</span>
-<h3>生成模型数学基础</h3>
-<p>从零基础概率论出发，一路建立 VAE、Diffusion、Score-based Models 与 Flow Matching 的数学体系。</p>
-<div class="tag-row"><span>Probability</span><span>VAE</span><span>Diffusion</span><span>Score</span><span>Flow Matching</span></div>
-<div class="knowledge-path">概率基础 → 变分推断 → VAE → Diffusion → Score → Flow Matching → 统一视角</div>
-</a>
-</div></div>
-
-<div class="knowledge-branch future-branch">
-<div class="branch-label">Future Branches</div>
-<div class="knowledge-grid">
-<div class="knowledge-card placeholder">
-<span class="status muted">可继续扩展</span>
-<h3>新的知识体系</h3>
-<p>未来无论是 Agent、World Model、强化学习、机器人、数学基础或其他方向，都可以作为新的独立分支加入这里。</p>
-</div>
-</div></div>
-</div>
-</section>
-
-<section><h2>站点结构</h2>
-<div class="flow hub-structure">FishTank 首页<br>↓<br>知识树 / Knowledge Systems<br>↓<br><b>generative-models/</b> · future-system-a/ · future-system-b/<br>↓<br>每个体系自己的章节、附录与学习路线</div>
-<div class="callout"><b>现在 GitHub Pages 只负责托管一个站点。</b><p>以后增加知识体系，不需要再“部署一个 Pages”。只是在同一个站点下增加新的目录与入口。例如未来可以出现 <code>/agent-systems/</code>、<code>/world-models/</code>、<code>/reinforcement-learning/</code> 等独立模块。</p></div>
-</section>
-<footer>FishTank · Personal Knowledge Tree</footer>
-</article></main></body></html>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>在知识的海洋里，持续探索。 · FishTank</title>
+<link rel="stylesheet" href="./assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="./index.html">🐟 FishTank</a><nav><a href="./01-python/index.html">Python</a><a href="./02-langchain/index.html">LangChain</a><a href="./03-machinelearning/index.html">机器学习</a></nav></header>
+<main><h1>在知识的海洋里，持续探索。</h1><p class="intro">FishTank 个人知识库 · 从 Python 基础到智能体，再到机器学习理论与实验。</p><div class="grid"><a class="card" href="01-python/index.html"><h2>Python</h2><p>语言基础与常用标准库</p><span>3 个学习入口 →</span></a><a class="card" href="02-langchain/index.html"><h2>LangChain</h2><p>LLM 应用与 Agent 实验</p><span>1 个学习入口 →</span></a><a class="card" href="03-machinelearning/index.html"><h2>机器学习</h2><p>强化学习与生成模型</p><span>9 个学习入口 →</span></a></div><section><h2>学习路线</h2><p>Python 语言与工具 → LangChain 应用实践 → 强化学习基础与实验 / 生成模型数学基础</p><p>各章节收录原始笔记和实验代码，可通过“查看源文件”继续阅读或下载。</p></section></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>

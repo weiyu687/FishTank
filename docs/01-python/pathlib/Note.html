@@ -1,0 +1,167 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>pathlib · FishTank</title>
+<link rel="stylesheet" href="../../assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="../../index.html">🐟 FishTank</a><nav><a href="../../01-python/index.html">Python</a><a href="../../02-langchain/index.html">LangChain</a><a href="../../03-machinelearning/index.html">机器学习</a></nav></header>
+<main><h1>pathlib</h1><p><a href="https://github.com/weiyu687/FishTank/blob/main/01-python/pathlib/Note.md">查看源文件</a></p><h2 id="pathlib">pathlib</h2>
+<p>提供表示文件系统路径的类，语义适用于不同操作系统</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">functions \ attribute</th>
+<th style="text-align: center;">link</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">Path()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.exists()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.exists">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.is_file()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.is_file">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.is_dir()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.is_dir">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.mkdir()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.mkdir">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.read_text()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.read_text">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.write_text()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.write_text">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.iterdir()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.iterdir">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.resolve()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.resolve">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.joinpath()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.PurePath.joinpath">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.rmdir()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.rmdir">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.parents</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.PurePath.parents">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.parent</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.PurePath.parent">doc</a></td>
+</tr>
+<tr>
+<td style="text-align: center;">.glob()</td>
+<td style="text-align: center;"><a href="https://docs.python.org/zh-cn/3.9/library/pathlib.html#pathlib.Path.glob">doc</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="path">Path()</h3>
+<p>以当前系统的路径风格表示路径</p>
+<pre><code class="language-python">Path('setup.py')    # 相对路径
+Path(&quot;.&quot;) / &quot;.env&quot;
+</code></pre>
+<blockquote>
+<p>'/'用于Linux系统,"\"用于Windows系统</p>
+</blockquote>
+<h3 id="exists">.exists()</h3>
+<p>判断此路径是否指向一个已存在的文件或目录，
+返回Bool类型</p>
+<pre><code class="language-python">Path('.').exists()
+</code></pre>
+<h3 id="is_file">.is_file()</h3>
+<p>如果文件指向一个常规文件（或指向常规文件的符号链接）则返回 True，指向其他类型的文件则返回 False。</p>
+<p>当路径不存在或者是一个破损的符号链接时也会返回 False；其他错误（例如权限错误）被传播。</p>
+<pre><code class="language-python">Path('.').is_file()
+</code></pre>
+<h3 id="is_dir">.is_dir()</h3>
+<p>如果文件指向一个目录（或指向目录的符号链接）则返回 True，指向其他类型的文件则返回 False。</p>
+<p>当路径不存在或者是一个破损的符号链接时也会返回 False；其他错误（例如权限错误）被传播。</p>
+<pre><code class="language-python">Path('.').is_dir()
+</code></pre>
+<h3 id="mkdir">.mkdir()</h3>
+<p>创建目录。</p>
+<p>Path.mkdir(mode=0o777, parents=False, exist_ok=False)</p>
+<pre><code class="language-python">Path('./test').mkdir()
+</code></pre>
+<p>如果<em>parents</em>为False，那么不考虑指定目录的父级目录，若目录不存在则创建该文件夹，若父级目录不存在则抛出FileNotFoundError。</p>
+<p>如果<em>parents</em>为True，那么不存在的父级目录会被创建。</p>
+<p>如果<em>exist_ok</em>为False，即目录存在不被允许，那么当指定目录已经存在时会抛出FileExistsError。如果<em>exist_ok</em>True，那么允许指定的目录已经存在。</p>
+<h3 id="read_text">.read_text()</h3>
+<p>以字符串形式返回路径指向的文件的解码后文本内容。</p>
+<h3 id="write_text">.write_text()</h3>
+<p>将文件以文本模式打开，写入 data 并关闭。</p>
+<p>二者仅支持<strong>text file</strong>，比如：.txt、.md、.py、.json、.env、.csv、.ipynb等。
+不支持其他类型文件，比如二进制文件，例如：.png/.jpg、.pdf、.zip、.pkl、.exe等。</p>
+<pre><code class="language-python">p = Path('my_text_file')
+p.write_text('Text file contents', encoding=&quot;utf-8&quot;)
+p.read_text(encoding=&quot;utf-8&quot;)
+# 'Text file contents'
+</code></pre>
+<h3 id="iterdir">.iterdir()</h3>
+<p>当路径指向一个目录时，产生该路径下的对象的路径，
+返回类型是<strong>迭代器generator</strong>。</p>
+<pre><code class="language-python">p = Path('docs')
+for child in p.iterdir():
+    print(child)
+# PosixPath('docs/conf.py')
+# PosixPath('docs/_templates')
+# PosixPath('docs/make.bat')
+# PosixPath('docs/index.rst')
+</code></pre>
+<h3 id="resolve">.resolve()</h3>
+<p>将路径绝对化，解析任何符号链接。返回新的路径对象。</p>
+<pre><code class="language-python">p = Path('./')
+p.resolve()
+</code></pre>
+<h3 id="joinpath">.joinpath()</h3>
+<p>路径拼接。</p>
+<pre><code class="language-python"># 两种等价语法
+Path('/etc').joinpath('init.d', 'apache2')
+
+Path('/etc') / &quot;init.d&quot; / &quot;apache2&quot;
+# '/etc/init.d/apache2'
+</code></pre>
+<h3 id="rmdir">.rmdir()</h3>
+<p>移除此目录。此目录必须为空。</p>
+<h3 id="parents">.parents</h3>
+<p>提供访问此路径的逻辑祖先的不可变序列。返回类型是序列对象。
+generator仅能遍历一次，比如使用for进行遍历，
+序列对象可以多次下标访问，二者分别具有动态属性和静态属性。</p>
+<pre><code class="language-python">p = Path('c:/foo/bar/setup.py')
+
+print(p.parents[0])
+# Path('c:/foo/bar')
+
+print(p.parents[1])
+# Path('c:/foo')
+
+print(p.parents[2])
+# Path('c:/')
+</code></pre>
+<p>迭代器下标越小路径越接近输入路径。</p>
+<h3 id="parent">.parent</h3>
+<p>此路径的逻辑父路径。</p>
+<pre><code class="language-python">p = Path('/a/b/c/d')
+
+print(p.parent)
+# Path('/a/b/c')
+</code></pre>
+<h3 id="glob">.glob()</h3>
+<p>解析相对于此路径的通配符 pattern，产生所有匹配的文件。返回类型是generator。</p></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>

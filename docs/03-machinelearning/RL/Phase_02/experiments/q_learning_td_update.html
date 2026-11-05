@@ -1,0 +1,41 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>RL / Phase_02 / experiments / q_learning_td_update.ipynb · FishTank</title>
+<link rel="stylesheet" href="../../../../assets/library.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head>
+<body><header><a href="../../../../index.html">🐟 FishTank</a><nav><a href="../../../../01-python/index.html">Python</a><a href="../../../../02-langchain/index.html">LangChain</a><a href="../../../../03-machinelearning/index.html">机器学习</a></nav></header>
+<main><h1>RL / Phase_02 / experiments / q_learning_td_update.ipynb</h1><p><a href="https://github.com/weiyu687/FishTank/blob/main/03-machinelearning/RL/Phase_02/experiments/q_learning_td_update.ipynb">查看源文件</a></p><p class="intro">实验笔记 · 代码仅展示，浏览页面不会执行。</p>
+<pre><code>
+# 当前 Q 值
+q_old = 4.0
+
+# 本次交互获得的奖励
+reward = 2.0
+
+# 下一状态各动作的 Q 值
+next_q_values = [3.0, 8.0, 5.0]
+
+# 参数
+gamma = 0.9
+alpha = 0.5
+
+# 下一状态的最大 Q 值
+best_next_q = max(next_q_values)
+
+# 计算目标值
+target = reward + gamma * best_next_q
+
+# 计算 TD 误差
+td_error = target - q_old
+
+# 更新 Q 值
+q_new = q_old + alpha * td_error
+
+print(&quot;目标值:&quot;, target)
+print(&quot;TD误差:&quot;, td_error)
+print(&quot;更新后的Q值:&quot;, q_new)
+</code></pre>
+<pre class="output">目标值: 9.2
+TD误差: 5.199999999999999
+更新后的Q值: 6.6
+</pre></main><footer>FishTank · 学习、实验与持续积累</footer></body></html>
